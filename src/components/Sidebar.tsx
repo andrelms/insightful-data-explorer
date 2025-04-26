@@ -1,36 +1,25 @@
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, LayoutDashboard, Settings, FileText, Database, MessageCircle, Clock, Upload, Layers, Users, MessageSquare, BarChart } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useTheme } from "@/components/ThemeProvider";
-
 interface SidebarProps {
   open: boolean;
   setOpen: (open: boolean) => void;
 }
-
-export default function Sidebar({ open, setOpen }: SidebarProps) {
-  const { theme } = useTheme();
-  
-  return (
-    <>
+export default function Sidebar({
+  open,
+  setOpen
+}: SidebarProps) {
+  const {
+    theme
+  } = useTheme();
+  return <>
       {/* Overlay for mobile */}
-      <div
-        className={cn(
-          "fixed inset-0 z-20 bg-background/80 backdrop-blur-sm md:hidden",
-          open ? "block" : "hidden"
-        )}
-        onClick={() => setOpen(false)}
-      />
+      <div className={cn("fixed inset-0 z-20 bg-background/80 backdrop-blur-sm md:hidden", open ? "block" : "hidden")} onClick={() => setOpen(false)} />
 
       {/* Sidebar */}
-      <div
-        className={cn(
-          "fixed z-30 inset-y-0 left-0 w-64 bg-[#0f172a] dark:bg-[#0f172a] text-white border-r border-[#1e293b] px-3 py-4 flex flex-col transition-transform duration-300 md:relative md:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
+      <div className={cn("fixed z-30 inset-y-0 left-0 w-64 bg-[#0f172a] dark:bg-[#0f172a] text-white border-r border-[#1e293b] px-3 py-4 flex flex-col transition-transform duration-300 md:relative md:translate-x-0", open ? "translate-x-0" : "-translate-x-full")}>
         {/* Header */}
         <div className="flex items-center justify-between px-2 mb-6">
           <div className="flex items-center gap-2">
@@ -39,12 +28,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
             </div>
             <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-violet-500 bg-clip-text text-transparent">Sindicatos</h2>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setOpen(false)}
-            className="md:hidden text-gray-400 hover:text-white hover:bg-[#1e293b]"
-          >
+          <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="md:hidden text-gray-400 hover:text-white hover:bg-[#1e293b]">
             <ChevronLeft className="h-5 w-5" />
             <span className="sr-only">Fechar menu</span>
           </Button>
@@ -96,39 +80,21 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
           </div>
         </div>
       </div>
-    </>
-  );
+    </>;
 }
-
 interface NavItemProps {
   icon: React.ElementType;
   to: string;
   label: string;
   badge?: string;
 }
-
-function NavItem({ icon: Icon, to, label, badge }: NavItemProps) {
-  return (
-    <li>
-      <NavLink 
-        to={to} 
-        className={({ isActive }) => cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium",
-          "transition-colors hover:bg-[#1e293b] hover:text-white",
-          isActive 
-            ? "bg-gradient-to-r from-blue-600/40 to-violet-600/40 text-white" 
-            : "text-gray-300"
-        )}
-        end={to === "/"}
-      >
-        <Icon className="h-5 w-5" />
-        <span>{label}</span>
-        {badge && (
-          <span className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-500/20 text-blue-300">
-            {badge}
-          </span>
-        )}
-      </NavLink>
-    </li>
-  );
+function NavItem({
+  icon: Icon,
+  to,
+  label,
+  badge
+}: NavItemProps) {
+  return <li>
+      
+    </li>;
 }
