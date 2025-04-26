@@ -1,0 +1,223 @@
+
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MessageCircle, ThumbsUp, Calendar, Link2, Clock, ArrowRight } from "lucide-react";
+
+interface FeedItem {
+  id: string;
+  type: "noticia" | "evento" | "convencao";
+  source: {
+    name: string;
+    avatar?: string;
+    verified: boolean;
+  };
+  title: string;
+  content: string;
+  imageUrl?: string;
+  date: Date;
+  likes?: number;
+  comments?: number;
+  eventDate?: Date;
+  tag?: string;
+  url?: string;
+}
+
+const mockFeedItems: FeedItem[] = [
+  {
+    id: "1",
+    type: "noticia",
+    source: {
+      name: "SINDICATO DOS METALÚRGICOS",
+      avatar: "https://ui-avatars.com/api/?name=SM&background=0D8ABC&color=fff",
+      verified: true,
+    },
+    title: "Negociação Coletiva 2024: reunião define pauta dos metalúrgicos",
+    content: "Foi realizada na última quarta-feira (24) a assembleia que definiu a pauta de reivindicações dos metalúrgicos para a campanha salarial deste ano. Entre os principais pontos estão reajuste acima da inflação, manutenção de benefícios e ampliação do auxílio educação.",
+    imageUrl: "https://images.unsplash.com/photo-1533038590840-1cde6e668a91?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
+    date: new Date(2024, 3, 24),
+    likes: 45,
+    comments: 8,
+    tag: "Negociação",
+    url: "#"
+  },
+  {
+    id: "2",
+    type: "convencao",
+    source: {
+      name: "SINDICATO DO COMÉRCIO",
+      avatar: "https://ui-avatars.com/api/?name=SC&background=2E8B57&color=fff",
+      verified: true,
+    },
+    title: "Nova Convenção Coletiva 2023-2024 homologada com reajuste de 6,5%",
+    content: "Foi assinada ontem a nova convenção coletiva dos comerciários para o período 2023-2024. O documento prevê reajuste salarial de 6,5%, aumento do vale-alimentação e novas regras para banco de horas.",
+    date: new Date(2024, 3, 15),
+    tag: "Convenção",
+    url: "#"
+  },
+  {
+    id: "3",
+    type: "evento",
+    source: {
+      name: "SINDICATO DOS PROFESSORES",
+      avatar: "https://ui-avatars.com/api/?name=SP&background=8B4513&color=fff",
+      verified: true,
+    },
+    title: "Seminário sobre novas tecnologias na educação",
+    content: "O Sindicato dos Professores realizará seminário gratuito sobre o uso de tecnologias na educação. O evento ocorrerá no auditório da sede e contará com especialistas do setor educacional.",
+    imageUrl: "https://images.unsplash.com/photo-1503676382389-4809596d5290?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
+    date: new Date(2024, 3, 10),
+    eventDate: new Date(2024, 4, 15),
+    tag: "Evento",
+    url: "#"
+  },
+  {
+    id: "4",
+    type: "noticia",
+    source: {
+      name: "SINDICATO DOS BANCÁRIOS",
+      avatar: "https://ui-avatars.com/api/?name=SB&background=4682B4&color=fff",
+      verified: true,
+    },
+    title: "Bancários conquistam ampliação do home office na nova CCT",
+    content: "A nova convenção coletiva dos bancários, assinada nesta semana, consolida o modelo de trabalho híbrido para a categoria, ampliando as possibilidades de home office e estabelecendo ajuda de custo para despesas domésticas.",
+    date: new Date(2024, 3, 5),
+    likes: 87,
+    comments: 12,
+    tag: "Conquista",
+    url: "#"
+  },
+];
+
+export function FeedSindicatos() {
+  const [activeTab, setActiveTab] = useState<"all" | "noticias" | "eventos" | "convencoes">("all");
+
+  const filteredFeed = mockFeedItems.filter(item => {
+    if (activeTab === "all") return true;
+    if (activeTab === "noticias" && item.type === "noticia") return true;
+    if (activeTab === "eventos" && item.type === "evento") return true;
+    if (activeTab === "convencoes" && item.type === "convencao") return true;
+    return false;
+  });
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="bg-gradient-to-r from-blue-600/90 to-violet-600/90 text-white">
+        <CardTitle className="flex items-center justify-between">
+          <span>Feed de Atualizações</span>
+          <Badge variant="outline" className="text-xs font-normal bg-white/10 border-white/20 hover:bg-white/20">
+            Atualizado hoje
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <div className="border-b">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+          <TabsList className="grid grid-cols-4 h-12">
+            <TabsTrigger value="all">Todos</TabsTrigger>
+            <TabsTrigger value="noticias">Notícias</TabsTrigger>
+            <TabsTrigger value="eventos">Eventos</TabsTrigger>
+            <TabsTrigger value="convencoes">Convenções</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      <CardContent className="p-0">
+        <div className="max-h-[500px] overflow-y-auto">
+          {filteredFeed.map(item => (
+            <div key={item.id} className="p-4 border-b last:border-b-0 animate-fade-in">
+              <div className="flex items-center gap-3 mb-3">
+                <Avatar className="h-10 w-10">
+                  {item.source.avatar ? (
+                    <AvatarImage src={item.source.avatar} alt={item.source.name} />
+                  ) : null}
+                  <AvatarFallback>{item.source.name.substring(0, 2)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium flex items-center gap-1">
+                    {item.source.name}
+                    {item.source.verified && (
+                      <span className="inline-flex items-center justify-center rounded-full bg-blue-500 h-3 w-3">
+                        <span className="text-[8px] text-white">✓</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {formatDate(item.date)}
+                    </span>
+                    {item.tag && (
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                        {item.tag}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <h3 className="text-base font-medium mb-2">{item.title}</h3>
+              <p className="text-sm text-muted-foreground mb-3">{item.content}</p>
+              
+              {item.imageUrl && (
+                <div className="mb-3 rounded-md overflow-hidden">
+                  <img 
+                    src={item.imageUrl} 
+                    alt={item.title} 
+                    className="w-full h-40 object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+              )}
+              
+              <div className="flex justify-between items-center mt-2">
+                <div className="flex gap-3">
+                  {item.type === "noticia" && (
+                    <>
+                      <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground">
+                        <ThumbsUp className="h-3 w-3 mr-1" />
+                        {item.likes}
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground">
+                        <MessageCircle className="h-3 w-3 mr-1" />
+                        {item.comments}
+                      </Button>
+                    </>
+                  )}
+                  
+                  {item.type === "evento" && item.eventDate && (
+                    <Badge variant="outline" className="h-8 text-xs font-normal flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {formatDate(item.eventDate)}
+                    </Badge>
+                  )}
+                </div>
+                
+                <Button variant="link" size="sm" className="text-xs font-medium text-primary">
+                  {item.type === "noticia" && "Ler mais"}
+                  {item.type === "evento" && "Saiba mais"}
+                  {item.type === "convencao" && "Ver convenção"}
+                  <ArrowRight className="ml-1 h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+          
+          {filteredFeed.length === 0 && (
+            <div className="py-8 text-center">
+              <p className="text-muted-foreground">Nenhuma atualização encontrada</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

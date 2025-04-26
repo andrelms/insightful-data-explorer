@@ -3,14 +3,17 @@ import { ReactNode, useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { Menu, Moon, Sun } from "lucide-react";
+import { Menu, Bell, MessageSquare } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
+import { Badge } from "./ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { theme } = useTheme();
@@ -25,7 +28,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[#f0f4f8] dark:bg-[#0f172a] transition-colors duration-300">
+    <div className="flex min-h-screen bg-[#f5faff] dark:bg-[#0f172a] transition-colors duration-300">
       {/* Sidebar */}
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
 
@@ -59,11 +62,32 @@ export function MainLayout({ children }: MainLayoutProps) {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative"
+              onClick={() => navigate("/chat")}
+            >
+              <MessageSquare className="h-5 w-5" />
+              <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0">2</Badge>
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative"
+            >
+              <Bell className="h-5 w-5" />
+              <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0">3</Badge>
+            </Button>
+            
             <ThemeToggle />
+            
             <Button 
               variant="outline" 
               size="sm" 
               className="hidden md:flex items-center gap-2 rounded-full hover:bg-primary hover:text-white transition-colors"
+              onClick={() => navigate("/contato")}
             >
               <span className="text-xs">Contato</span>
             </Button>

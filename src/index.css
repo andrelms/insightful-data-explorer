@@ -186,7 +186,7 @@
 }
 
 .hover-scale:hover {
-  @apply transform scale-105;
+  @apply transform scale-[1.02];
 }
 
 .hover-glow {
@@ -195,4 +195,54 @@
 
 .hover-glow:hover {
   @apply shadow-lg shadow-primary/25;
+}
+
+/* Custom component styles based on the reference site */
+.estado-card {
+  @apply bg-white dark:bg-slate-800 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 border border-slate-200 dark:border-slate-700;
+}
+
+.estado-header {
+  @apply bg-gradient-to-r from-blue-600 to-violet-600 text-white p-4;
+}
+
+.search-input {
+  @apply pl-10 pr-12 py-6 rounded-full bg-white/20 backdrop-blur-md border-white/10 text-white placeholder:text-white/70 focus:bg-white/30 transition-all;
+}
+
+/* Progress animations */
+.progress-animate {
+  background-size: 400% 400%;
+  animation: progress-anim 3s ease infinite;
+}
+
+@keyframes progress-anim {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Enhanced scrollbar for chat */
+.chat-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 155, 155, 0.5);
+  border-radius: 20px;
+  border: transparent;
+}
+
+/* Tooltip styles */
+.custom-tooltip {
+  @apply bg-black/80 text-white text-xs py-1 px-2 rounded shadow-lg;
+}
+
+/* Card hover effects */
+.card-hover-effect {
+  @apply transition-all duration-300 border-transparent hover:border-primary/50 hover:shadow-md;
 }

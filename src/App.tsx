@@ -15,6 +15,11 @@ import ConvencaoDetalhes from "./pages/ConvencaoDetalhes";
 import Admin from "./pages/Admin";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
+import ProcessarDados from "./pages/ProcessarDados";
+import PainelSindicatos from "./pages/PainelSindicatos";
+import Chat from "./pages/Chat";
+import Historico from "./pages/Historico";
+import Contato from "./pages/Contato";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +37,11 @@ const App = () => (
               <Route path="/convencoes/:id" element={<ConvencaoDetalhes />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/processar-dados" element={<ProcessarDados />} />
+              <Route path="/painel-sindicatos" element={<PainelSindicatos />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/historico" element={<Historico />} />
+              <Route path="/contato" element={<Contato />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>

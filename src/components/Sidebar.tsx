@@ -1,7 +1,7 @@
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, LayoutDashboard, Settings, FileText, Database, MessageCircle, Clock } from "lucide-react";
+import { ChevronLeft, LayoutDashboard, Settings, FileText, Database, MessageCircle, Clock, Upload, Layers, Users, MessageSquare, BarChart } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useTheme } from "@/components/ThemeProvider";
 
@@ -33,7 +33,12 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-2 mb-6">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-violet-500 bg-clip-text text-transparent">Sindicato</h2>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
+              <Layers className="h-4 w-4 text-white" />
+            </div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-violet-500 bg-clip-text text-transparent">Sindicatos</h2>
+          </div>
           <Button
             variant="ghost"
             size="icon"
@@ -53,8 +58,9 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
             </h2>
             <ul className="space-y-1">
               <NavItem icon={LayoutDashboard} to="/" label="Dashboard" />
+              <NavItem icon={BarChart} to="/painel-sindicatos" label="Painel Sindicatos" />
               <NavItem icon={FileText} to="/convencoes" label="Convenções" />
-              <NavItem icon={Database} to="/admin" label="Administrativo" />
+              <NavItem icon={Upload} to="/processar-dados" label="Processar Dados" badge="Novo" />
             </ul>
           </div>
           
@@ -63,8 +69,9 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
               Ferramentas
             </h2>
             <ul className="space-y-1">
-              <NavItem icon={MessageCircle} to="/chat" label="Chat IA" badge="Novo" />
+              <NavItem icon={MessageSquare} to="/chat" label="Chat IA" />
               <NavItem icon={Clock} to="/historico" label="Histórico" />
+              <NavItem icon={Users} to="/admin" label="Administrativo" />
               <NavItem icon={Settings} to="/configuracoes" label="Configurações" />
             </ul>
           </div>
@@ -72,8 +79,11 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
 
         {/* Footer */}
         <div className="border-t border-[#1e293b] pt-3 mt-6">
-          <div className="text-xs text-gray-400 px-4">
-            Versão 1.0.0
+          <div className="text-xs text-gray-400 px-4 flex items-center justify-between">
+            <span>Versão 1.0.0</span>
+            <NavLink to="/contato" className="text-blue-400 hover:text-blue-300">
+              Contato
+            </NavLink>
           </div>
           <div className="mt-4 px-4">
             <div className="glass-effect bg-[#1e293b]/60 p-3 rounded-xl">
