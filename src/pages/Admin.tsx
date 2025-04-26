@@ -109,19 +109,19 @@ const Admin = () => {
                     <TableCell>25/04/2023 08:30</TableCell>
                     <TableCell>sistema@auto.com</TableCell>
                     <TableCell>124</TableCell>
-                    <TableCell><Badge variant="success">Concluído</Badge></TableCell>
+                    <TableCell><Badge variant="secondary" className="bg-green-500 text-white">Concluído</Badge></TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>18/04/2023 10:15</TableCell>
                     <TableCell>admin@sindicato.org</TableCell>
                     <TableCell>87</TableCell>
-                    <TableCell><Badge variant="success">Concluído</Badge></TableCell>
+                    <TableCell><Badge variant="secondary" className="bg-green-500 text-white">Concluído</Badge></TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>10/04/2023 14:22</TableCell>
                     <TableCell>sistema@auto.com</TableCell>
                     <TableCell>56</TableCell>
-                    <TableCell><Badge variant="success">Concluído</Badge></TableCell>
+                    <TableCell><Badge variant="secondary" className="bg-green-500 text-white">Concluído</Badge></TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>02/04/2023 09:45</TableCell>
