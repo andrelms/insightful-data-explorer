@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { FileUpload } from "@/components/dashboard/FileUpload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,24 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FileText, Database, UploadCloud, Check, RefreshCw } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-
 const ProcessarDados = () => {
   const [activeTab, setActiveTab] = useState("upload");
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processedFile, setProcessedFile] = useState<File | null>(null);
-
   const handleFileUploaded = (file: File) => {
     setProcessedFile(file);
     setActiveTab("processar");
   };
-
   const startProcessing = () => {
     if (!processedFile) return;
-    
     setIsProcessing(true);
     setProcessingProgress(0);
-    
+
     // Simulate processing progress
     const interval = setInterval(() => {
       setProcessingProgress(prev => {
@@ -37,7 +32,7 @@ const ProcessarDados = () => {
             toast({
               title: "Processamento concluído",
               description: "Os dados foram extraídos e processados com sucesso!",
-              duration: 5000,
+              duration: 5000
             });
           }, 1000);
           return 100;
@@ -46,9 +41,7 @@ const ProcessarDados = () => {
       });
     }, 300);
   };
-
-  return (
-    <div className="space-y-6 animate-fade-in">
+  return <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Processamento de Dados</h1>
         <p className="text-muted-foreground">
@@ -76,33 +69,17 @@ const ProcessarDados = () => {
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Upload de Excel</CardTitle>
+                <CardTitle>Upload de Dados</CardTitle>
                 <CardDescription>
                   Faça upload de arquivos Excel com dados de convenções coletivas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FileUpload 
-                  acceptedFileTypes={['excel']} 
-                  onUploadSuccess={handleFileUploaded}
-                />
+                <FileUpload acceptedFileTypes={['excel']} onUploadSuccess={handleFileUploaded} />
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Upload de PDF</CardTitle>
-                <CardDescription>
-                  Faça upload de PDFs de convenções coletivas para extração de dados
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FileUpload 
-                  acceptedFileTypes={['pdf']} 
-                  onUploadSuccess={handleFileUploaded}
-                />
-              </CardContent>
-            </Card>
+            
           </div>
         </TabsContent>
         
@@ -115,14 +92,9 @@ const ProcessarDados = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {processedFile && (
-                <div className="space-y-6">
+              {processedFile && <div className="space-y-6">
                   <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-                    {processedFile.name.endsWith('.pdf') ? (
-                      <FileText className="h-10 w-10 text-red-500" />
-                    ) : (
-                      <Database className="h-10 w-10 text-green-500" />
-                    )}
+                    {processedFile.name.endsWith('.pdf') ? <FileText className="h-10 w-10 text-red-500" /> : <Database className="h-10 w-10 text-green-500" />}
                     <div>
                       <h3 className="font-medium">{processedFile.name}</h3>
                       <p className="text-sm text-muted-foreground">
@@ -131,16 +103,13 @@ const ProcessarDados = () => {
                     </div>
                   </div>
                   
-                  {isProcessing ? (
-                    <div className="space-y-2">
+                  {isProcessing ? <div className="space-y-2">
                       <Progress value={processingProgress} className="h-2" />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Processando com Gemini Pro 2.5...</span>
                         <span>{processingProgress}%</span>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col space-y-4">
+                    </div> : <div className="flex flex-col space-y-4">
                       <p className="text-sm">
                         O arquivo será processado usando o Gemini Pro 2.5 para extrair informações estruturadas.
                         Este processo inclui:
@@ -154,10 +123,8 @@ const ProcessarDados = () => {
                       <Button onClick={startProcessing} className="w-full mt-4">
                         Iniciar Processamento
                       </Button>
-                    </div>
-                  )}
-                </div>
-              )}
+                    </div>}
+                </div>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -207,8 +174,6 @@ const ProcessarDados = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
-
 export default ProcessarDados;
