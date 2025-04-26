@@ -1,39 +1,39 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
+  placeholder?: string;
 }
 
-export function SearchBar({ onSearch }: SearchBarProps) {
+export function SearchBar({ onSearch, placeholder = "Buscar convenções, sindicatos, cargos..." }: SearchBarProps) {
   const [query, setQuery] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(query);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative">
-      <Input
-        type="text"
-        placeholder="Buscar convenções por título, sindicato ou número..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="pr-10"
-      />
-      <Button
-        type="submit"
-        variant="ghost"
-        size="icon"
-        className="absolute right-0 top-0 h-full aspect-square"
-      >
-        <Search className="h-4 w-4" />
-        <span className="sr-only">Buscar</span>
-      </Button>
+    <form onSubmit={handleSearch} className="relative w-full max-w-md">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder={placeholder}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="pl-10 pr-12 py-6 rounded-full bg-white/20 backdrop-blur-md border-white/10 text-white placeholder:text-white/70 focus:bg-white/30 transition-all"
+        />
+        <button
+          type="submit"
+          className="absolute right-1 top-1/2 -translate-y-1/2 bg-white text-primary rounded-full px-3 py-1 text-xs font-medium hover:bg-white/90 transition-colors h-8"
+        >
+          Buscar
+        </button>
+      </div>
     </form>
   );
 }

@@ -1,5 +1,5 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ReactNode } from "react";
 
 interface StatCardProps {
@@ -15,27 +15,34 @@ interface StatCardProps {
 
 export function StatCard({ title, value, icon, description, trend }: StatCardProps) {
   return (
-    <Card className="card-gradient">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="w-6 h-6 text-muted-foreground">{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        )}
-        {trend && (
-          <div className="flex items-center mt-1">
-            <span
-              className={`text-xs ${
-                trend.isPositive ? "text-green-500" : "text-red-500"
-              }`}
-            >
-              {trend.isPositive ? "+" : "-"}{trend.value}%
-            </span>
+    <Card className="overflow-hidden border hover-scale hover-glow transition-all">
+      <CardContent className="p-0">
+        <div className="flex flex-col h-full">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 border-b flex items-center justify-between">
+            <h3 className="text-sm font-medium text-foreground/70">{title}</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary">
+              {icon}
+            </div>
           </div>
-        )}
+          
+          <div className="p-4 flex flex-col">
+            <div className="flex items-end gap-2">
+              <span className="text-2xl font-bold">{value}</span>
+              {trend && (
+                <span
+                  className={`text-xs font-medium px-1.5 py-0.5 rounded-full flex items-center ${
+                    trend.isPositive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                  }`}
+                >
+                  {trend.isPositive ? "+" : "-"}{trend.value}%
+                </span>
+              )}
+            </div>
+            {description && (
+              <p className="text-xs text-muted-foreground mt-1">{description}</p>
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

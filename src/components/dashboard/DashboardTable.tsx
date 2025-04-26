@@ -12,7 +12,7 @@ interface DashboardTableProps {
 
 export function DashboardTable({ data, columns }: DashboardTableProps) {
   return (
-    <div className="w-full overflow-auto rounded-lg border">
+    <div className="w-full overflow-auto rounded-lg border bg-card shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
@@ -24,15 +24,23 @@ export function DashboardTable({ data, columns }: DashboardTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((row, i) => (
-            <TableRow key={i}>
-              {columns.map((column) => (
-                <TableCell key={column}>
-                  {row[column]}
-                </TableCell>
-              ))}
+          {data.length > 0 ? (
+            data.map((row, i) => (
+              <TableRow key={i} className="hover:bg-muted/30 transition-colors">
+                {columns.map((column) => (
+                  <TableCell key={column}>
+                    {row[column]}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="text-center py-8 text-muted-foreground">
+                Nenhum dado disponível
+              </TableCell>
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
     </div>

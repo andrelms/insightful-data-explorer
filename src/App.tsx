@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { ChatBot } from "@/components/ChatBot";
+import { ChatBotExpanded } from "@/components/ChatBotExpanded";
 import { MainLayout } from "@/components/MainLayout";
 
 // Pages
@@ -35,7 +35,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>
-          <ChatBot />
+          <ChatBotExpanded />
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
