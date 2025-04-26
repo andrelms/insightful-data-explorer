@@ -1,6 +1,6 @@
-
 import { SearchBar } from "@/components/dashboard/SearchBar";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { DashboardTable } from "@/components/dashboard/DashboardTable";
 import { ConvencaoCard } from "@/components/dashboard/ConvencaoCard";
 import { FileText, AlertCircle, Clock, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +35,28 @@ const Dashboard = () => {
       description: "Base atualizada diariamente"
     }
   ];
+
+  // Mock data for the table
+  const mockTableData = [
+    {
+      Cargo: "Auxiliar Administrativo",
+      "CBO": "4110-05",
+      "Carga Horária": "44h",
+      "Piso Salarial": "R$ 1.800,00",
+      "Data Base": "01/03/2024",
+      "Sindicato": "SINDICATO DOS EMPREGADOS NO COMÉRCIO"
+    },
+    {
+      Cargo: "Vendedor",
+      "CBO": "5211-10",
+      "Carga Horária": "44h",
+      "Piso Salarial": "R$ 1.950,00",
+      "Data Base": "01/03/2024",
+      "Sindicato": "SINDICATO DOS EMPREGADOS NO COMÉRCIO"
+    }
+  ];
+
+  const tableColumns = ["Cargo", "CBO", "Carga Horária", "Piso Salarial", "Data Base", "Sindicato"];
 
   const mockConvencoes = [
     {
@@ -107,6 +129,11 @@ const Dashboard = () => {
         {mockStats.map((stat, i) => (
           <StatCard key={i} {...stat} />
         ))}
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Dados das Convenções</h2>
+        <DashboardTable data={mockTableData} columns={tableColumns} />
       </div>
 
       <div className="mt-8">

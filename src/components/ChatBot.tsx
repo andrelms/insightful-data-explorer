@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { ChatIcon, XIcon } from "lucide-react";
+import { MessageCircle, X } from "lucide-react";
 
 type Message = {
   role: "user" | "assistant";
@@ -50,7 +49,7 @@ export function ChatBot() {
         )}
         onClick={() => setIsOpen(true)}
       >
-        <ChatIcon className="w-6 h-6" />
+        <MessageCircle className="w-6 h-6" />
         <span className="sr-only">Abrir chat</span>
       </Button>
 
@@ -71,7 +70,7 @@ export function ChatBot() {
               className="h-8 w-8 rounded-full hover:bg-primary-foreground/20"
               onClick={() => setIsOpen(false)}
             >
-              <XIcon className="h-4 w-4" />
+              <X className="h-4 w-4" />
               <span className="sr-only">Fechar chat</span>
             </Button>
           </div>
