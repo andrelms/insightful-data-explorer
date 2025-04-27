@@ -72,20 +72,22 @@ const ProcessarDados = () => {
         </TabsList>
         
         <TabsContent value="upload" className="mt-0">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
+          <div className="flex justify-center">
+            <Card className="w-full max-w-2xl">
               <CardHeader>
                 <CardTitle>Upload de Dados</CardTitle>
                 <CardDescription>
-                  Faça upload de arquivos Excel com dados de convenções coletivas
+                  Faça upload de arquivos Excel ou PDF com dados de convenções coletivas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FileUpload acceptedFileTypes={['excel']} onUploadSuccess={handleFileUploaded} />
+                <FileUpload acceptedFileTypes={['excel', 'pdf']} onUploadSuccess={handleFileUploaded} />
+                <div className="mt-4 p-4 bg-muted/30 rounded text-sm text-center text-muted-foreground">
+                  <p>Excel/CSV: Dados para o banco de dados</p>
+                  <p>PDF: Convenção coletiva</p>
+                </div>
               </CardContent>
             </Card>
-            
-            
           </div>
         </TabsContent>
         

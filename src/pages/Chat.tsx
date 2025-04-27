@@ -1,12 +1,13 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, Copy, Check } from "lucide-react";
+import { Send, Bot, User, Sparkles, Copy, Check, FileText, TableIcon, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Message {
   id: string;
@@ -18,6 +19,16 @@ interface Message {
     type: 'convencao' | 'pdf' | 'database';
     reference: string;
   }[];
+  tables?: Array<{
+    title: string;
+    columns: string[];
+    data: any[];
+  }>;
+  charts?: Array<{
+    title: string;
+    type: 'bar' | 'line' | 'pie';
+    data: any;
+  }>;
 }
 
 const Chat = () => {
@@ -78,6 +89,18 @@ const Chat = () => {
               type: 'database',
               reference: 'Base de dados - atualizada em 15/04/2024'
             }
+          ],
+          tables: [
+            {
+              title: "Pisos Salariais por Categoria",
+              columns: ["Cargo", "Piso Salarial", "Data Base", "Sindicato"],
+              data: [
+                { Cargo: "Auxiliar Administrativo", "Piso Salarial": "R$ 1.800,00", "Data Base": "01/03/2023", "Sindicato": "SINDICOM" },
+                { Cargo: "Vendedor", "Piso Salarial": "R$ 1.950,00", "Data Base": "01/03/2023", "Sindicato": "SINDICOM" },
+                { Cargo: "Operador de Caixa", "Piso Salarial": "R$ 1.820,00", "Data Base": "01/03/2023", "Sindicato": "SINDICOM" },
+                { Cargo: "Metalúrgico Nível 1", "Piso Salarial": "R$ 2.200,00", "Data Base": "01/09/2022", "Sindicato": "SINDMETAL" }
+              ]
+            }
           ]
         };
       } else if (input.toLowerCase().includes('hora extra')) {
@@ -113,6 +136,33 @@ const Chat = () => {
             }
           ]
         };
+      } else if (input.toLowerCase().includes('comparar') || input.toLowerCase().includes('histórico')) {
+        botResponse = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Analisando os dados das convenções coletivas dos últimos 5 anos, observa-se uma tendência de crescimento nos pisos salariais acima da inflação para algumas categorias específicas. O setor metalúrgico apresentou os maiores aumentos, seguido pelo comércio.',
+          timestamp: new Date(),
+          sources: [
+            {
+              title: 'Histórico de Convenções',
+              type: 'database',
+              reference: 'Análise temporal 2020-2024'
+            }
+          ],
+          charts: [
+            {
+              title: "Evolução de Pisos Salariais (2020-2024)",
+              type: "bar",
+              data: {
+                labels: ["2020", "2021", "2022", "2023", "2024"],
+                datasets: [
+                  { label: "SINDICOM", data: [1450, 1550, 1650, 1800, 1950] },
+                  { label: "SINDMETAL", data: [1650, 1800, 1950, 2200, 2380] }
+                ]
+              }
+            }
+          ]
+        };
       } else {
         botResponse = {
           id: (Date.now() + 1).toString(),
@@ -138,6 +188,67 @@ const Chat = () => {
     navigator.clipboard.writeText(text);
     setCopied(id);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const renderTable = (table: { title: string; columns: string[]; data: any[] }) => {
+    return (
+      <div className="mt-3 mb-3 overflow-x-auto">
+        <h4 className="text-xs font-medium mb-1 flex items-center gap-1">
+          <TableIcon className="h-3 w-3" />
+          {table.title}
+        </h4>
+        <Table className="text-xs border rounded-md">
+          <TableHeader>
+            <TableRow>
+              {table.columns.map((column, idx) => (
+                <TableHead key={idx} className="py-1 px-2">{column}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {table.data.map((row, rowIdx) => (
+              <TableRow key={rowIdx}>
+                {table.columns.map((column, colIdx) => (
+                  <TableCell key={colIdx} className="py-1 px-2">{row[column]}</TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
+  const renderChart = (chart: { title: string; type: string; data: any }) => {
+    return (
+      <div className="mt-3 p-3 bg-muted rounded-md">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-medium flex items-center gap-1">
+            <BarChart2 className="h-3 w-3" />
+            {chart.title}
+          </h4>
+        </div>
+        <div className="h-48 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-sm border">
+          <div className="p-2 text-center">
+            <p className="text-sm font-medium mb-2">Dados do Gráfico ({chart.type})</p>
+            <div className="flex gap-4 justify-center">
+              {chart.data.datasets.map((dataset: any, i: number) => (
+                <div key={i} className="text-xs">
+                  <p className="font-medium">{dataset.label}</p>
+                  <ul>
+                    {dataset.data.map((value: number, j: number) => (
+                      <li key={j}>
+                        {chart.data.labels[j]}: R$ {value}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -183,9 +294,49 @@ const Chat = () => {
                       : "bg-card border"
                   )}
                 >
-                  <div className="whitespace-pre-wrap">
-                    {message.content}
+                  <div className="flex justify-between items-start">
+                    <div className="whitespace-pre-wrap">
+                      {message.content}
+                    </div>
+                    
+                    {message.role === 'assistant' && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-5 w-5 ml-2 mt-0 opacity-70 hover:opacity-100"
+                              onClick={() => copyToClipboard(message.id, message.content)}
+                            >
+                              {copied === message.id ? (
+                                <Check className="h-3 w-3" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {copied === message.id ? 'Copiado!' : 'Copiar mensagem'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
+                  
+                  {/* Render tables if present */}
+                  {message.tables && message.tables.length > 0 && (
+                    <div className="mt-3">
+                      {message.tables.map((table, i) => renderTable(table))}
+                    </div>
+                  )}
+                  
+                  {/* Render charts if present */}
+                  {message.charts && message.charts.length > 0 && (
+                    <div className="mt-3">
+                      {message.charts.map((chart, i) => renderChart(chart))}
+                    </div>
+                  )}
                   
                   {message.sources && message.sources.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
@@ -219,30 +370,6 @@ const Chat = () => {
                 
                 <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                   <span>{formatTimestamp(message.timestamp)}</span>
-                  
-                  {message.role === 'assistant' && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6"
-                            onClick={() => copyToClipboard(message.id, message.content)}
-                          >
-                            {copied === message.id ? (
-                              <Check className="h-3 w-3" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          {copied === message.id ? 'Copiado!' : 'Copiar mensagem'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
                 </div>
               </div>
             </div>

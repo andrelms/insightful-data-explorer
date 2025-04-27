@@ -30,16 +30,17 @@ export function DatabaseManagement() {
     setIsClearing(true);
     try {
       // Delete data from all tables in the correct order to respect foreign key constraints
-      await supabase.from('feed_noticias').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('convencoes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('uploaded_files').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('sindicatos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('historico_importacao').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      for (const tableName of validTableNames) {
+        await supabase.from(tableName).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
 
-      // Force refresh of dashboard data
+      // Force refresh of dashboard data by clearing localStorage
       localStorage.removeItem('dashboardData');
       localStorage.removeItem('feedData');
       localStorage.removeItem('estatisticasRegionais');
+      localStorage.removeItem('consultasRecentes');
+      localStorage.removeItem('estadisticasSindicatos');
+      localStorage.removeItem('cachedConvencoes');
       
       toast({
         title: "Base de dados limpa",
@@ -146,6 +147,7 @@ export function DatabaseManagement() {
             localStorage.removeItem('dashboardData');
             localStorage.removeItem('feedData');
             localStorage.removeItem('estatisticasRegionais');
+            localStorage.removeItem('consultasRecentes');
             
           } catch (parseError) {
             console.error('Erro ao processar arquivo:', parseError);
@@ -303,6 +305,7 @@ export function DatabaseManagement() {
                     <li>Todos os arquivos enviados (Excel, PDF, CSV)</li>
                     <li>Todo o histórico de feeds e notícias</li>
                     <li>Todas as estatísticas e métricas</li>
+                    <li>Todo o histórico de consultas e importações</li>
                   </ul>
                 </div>
               </div>
@@ -316,7 +319,7 @@ export function DatabaseManagement() {
           <DialogHeader>
             <DialogTitle>Confirmar limpeza da base de dados</DialogTitle>
             <DialogDescription>
-              Esta ação irá remover todos os dados do sistema. Esta ação não pode ser desfeita.
+              Esta ação irá remover todos os dados do sistema, incluindo o histórico de consultas. Esta ação não pode ser desfeita.
               Tem certeza que deseja continuar?
             </DialogDescription>
           </DialogHeader>

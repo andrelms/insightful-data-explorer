@@ -15,9 +15,12 @@ import {
   ChevronUp,
   Table as TableIcon,
   BarChart2,
-  Share2
+  Share2,
+  Copy,
+  Check
 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Message {
   id: string;
@@ -48,6 +51,7 @@ export function ChatBotExpanded() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [expandedSources, setExpandedSources] = useState<string[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
   const toggleSourceExpand = (messageId: string) => {
@@ -56,6 +60,12 @@ export function ChatBotExpanded() {
     } else {
       setExpandedSources([...expandedSources, messageId]);
     }
+  };
+
+  const copyToClipboard = (messageId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(messageId);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   // Mock function to simulate sending a message to the AI
@@ -258,7 +268,32 @@ export function ChatBotExpanded() {
                         : 'bg-muted/80 dark:bg-gray-800'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      {message.role === 'assistant' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-5 w-5 ml-2 mt-0 opacity-70 hover:opacity-100"
+                                onClick={() => copyToClipboard(message.id, message.content)}
+                              >
+                                {copiedId === message.id ? (
+                                  <Check className="h-3 w-3" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="center">
+                              {copiedId === message.id ? 'Copiado!' : 'Copiar resposta'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                     
                     {/* Tables */}
                     {message.tables && message.tables.length > 0 && (

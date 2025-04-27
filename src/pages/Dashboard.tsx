@@ -1,3 +1,4 @@
+
 import { SearchBar } from "@/components/dashboard/SearchBar";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ConvencaoCard } from "@/components/dashboard/ConvencaoCard";
@@ -39,13 +40,8 @@ const Dashboard = () => {
     }
   ]);
   const [convencoes, setConvencoes] = useState([]);
-  const [estatisticasRegionais, setEstatisticasRegionais] = useState([
-    { regiao: "Sudeste", convencoesCount: 128, sindicatosCount: 42 },
-    { regiao: "Nordeste", convencoesCount: 76, sindicatosCount: 28 },
-    { regiao: "Sul", convencoesCount: 64, sindicatosCount: 24 },
-    { regiao: "Centro-Oeste", convencoesCount: 36, sindicatosCount: 18 },
-    { regiao: "Norte", convencoesCount: 24, sindicatosCount: 12 }
-  ]);
+  const [estatisticasRegionais, setEstatisticasRegionais] = useState([]);
+  const [hasData, setHasData] = useState(false);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -56,12 +52,18 @@ const Dashboard = () => {
         supabase.from('feed_noticias').select('*').order('data_publicacao', { ascending: false }).limit(5)
       ]);
 
+      // Check if we have any data
+      const hasConvencoes = convencoesResult.data && convencoesResult.data.length > 0;
+      const hasSindicatos = sindicatosResult.data && sindicatosResult.data.length > 0;
+      
+      setHasData(hasConvencoes || hasSindicatos);
+      
       let totalConvencoes = convencoesResult.data?.length || 0;
       const lastUpdated = convencoesResult.data?.[0]?.updated_at 
         ? new Date(convencoesResult.data[0].updated_at).toLocaleDateString('pt-BR')
-        : "12/04/2023";
+        : "N/A";
         
-      if (convencoesResult.data && convencoesResult.data.length > 0) {
+      if (hasConvencoes) {
         const now = new Date();
         const vigentes = convencoesResult.data.filter(c => 
           new Date(c.vigencia_fim) >= now
@@ -105,41 +107,59 @@ const Dashboard = () => {
         
         setConvencoes(transformedConvencoes);
       } else {
-        setConvencoes([
+        setConvencoes([]);
+        setStats([
           {
-            title: "CONVENÇÃO COLETIVA DE TRABALHO 2023/2024 - SINDICATO DOS EMPREGADOS NO COMÉRCIO",
-            numero: "MG001234/2023",
-            ano: 2023,
-            sindicatos: ["COMERCIÁRIOS", "EMPREGADORES"],
-            vigenciaInicio: "2023-06-01",
-            vigenciaFim: "2024-05-31"
+            title: "Total de Convenções",
+            value: 0,
+            icon: <FileText className="h-4 w-4" />,
+            description: "Convenções indexadas"
           },
           {
-            title: "CONVENÇÃO COLETIVA DE TRABALHO 2022/2024 - METALÚRGICOS E INDÚSTRIAS METALÚRGICAS",
-            numero: "MG000789/2022",
-            ano: 2022,
-            sindicatos: ["METALÚRGICOS", "INDÚSTRIA METALÚRGICA"],
-            vigenciaInicio: "2022-09-01",
-            vigenciaFim: "2024-08-31"
+            title: "Convenções Vigentes",
+            value: 0,
+            icon: <Clock className="h-4 w-4" />,
+            trend: { value: 0, isPositive: true }
           },
           {
-            title: "CONVENÇÃO COLETIVA DE TRABALHO 2023/2025 - PROFESSORES E ESTABELECIMENTOS DE ENSINO",
-            numero: "MG002345/2023",
-            ano: 2023,
-            sindicatos: ["PROFESSORES", "ESCOLAS PARTICULARES"],
-            vigenciaInicio: "2023-03-01",
-            vigenciaFim: "2025-02-28"
+            title: "Convenções Pendentes",
+            value: 0,
+            icon: <AlertCircle className="h-4 w-4" />,
+            description: "Necessitam revisão"
           },
           {
-            title: "CONVENÇÃO COLETIVA DE TRABALHO 2022/2023 - TRABALHADORES EM TRANSPORTES RODOVIÁRIOS",
-            numero: "MG003456/2022",
-            ano: 2022,
-            sindicatos: ["RODOVIÁRIOS", "EMPRESAS DE TRANSPORTE"],
-            vigenciaInicio: "2022-05-01",
-            vigenciaFim: "2023-04-30"
+            title: "Última Atualização",
+            value: "N/A",
+            icon: <RefreshCw className="h-4 w-4" />,
+            description: "Base atualizada diariamente"
           }
         ]);
       }
+
+      // Set regional statistics based on database data or empty array if no data
+      if (hasSindicatos) {
+        const regions = ["Sudeste", "Nordeste", "Sul", "Centro-Oeste", "Norte"];
+        const regStats = regions.map(regiao => {
+          const sindicatosCount = sindicatosResult.data.filter(s => 
+            (s.estado === "SP" || s.estado === "MG" || s.estado === "RJ" || s.estado === "ES") && regiao === "Sudeste" ||
+            (s.estado === "BA" || s.estado === "PE" || s.estado === "CE" || s.estado === "MA" || s.estado === "PB" || s.estado === "RN" || s.estado === "AL" || s.estado === "SE" || s.estado === "PI") && regiao === "Nordeste" ||
+            (s.estado === "RS" || s.estado === "PR" || s.estado === "SC") && regiao === "Sul" ||
+            (s.estado === "MT" || s.estado === "MS" || s.estado === "GO" || s.estado === "DF") && regiao === "Centro-Oeste" ||
+            (s.estado === "AM" || s.estado === "PA" || s.estado === "TO" || s.estado === "RO" || s.estado === "AC" || s.estado === "AP" || s.estado === "RR") && regiao === "Norte"
+          ).length;
+          
+          return {
+            regiao,
+            sindicatosCount,
+            convencoesCount: Math.floor(sindicatosCount * 1.5) // Simulate convention count based on sindicatos
+          };
+        });
+        
+        setEstatisticasRegionais(regStats);
+      } else {
+        setEstatisticasRegionais([]);
+      }
+      
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       toast({
@@ -147,6 +167,7 @@ const Dashboard = () => {
         description: "Falha ao carregar dados do dashboard",
         variant: "destructive",
       });
+      setHasData(false);
     } finally {
       setIsLoading(false);
     }
@@ -157,12 +178,31 @@ const Dashboard = () => {
   }, []);
 
   const handleSearch = (query: string) => {
-    console.log("Searching for:", query);
+    navigate(`/convencoes?q=${encodeURIComponent(query)}`);
   };
 
   const handleViewConvencao = (numero: string) => {
     navigate(`/convencoes/${numero}`);
   };
+
+  const renderEmptyState = () => (
+    <div className="bg-muted/30 rounded-xl border p-8 text-center">
+      <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+        <AlertCircle className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-medium mb-2">Nenhum dado encontrado</h3>
+      <p className="text-muted-foreground mb-4">
+        A base de dados está vazia ou foi limpa recentemente.
+      </p>
+      <Button 
+        onClick={() => navigate("/processar-dados")}
+        className="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white"
+      >
+        <Upload className="mr-2 h-4 w-4" />
+        Importar Dados
+      </Button>
+    </div>
+  );
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -203,137 +243,138 @@ const Dashboard = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <FeedSindicatos />
-        </div>
-
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Dashboard - Convenções</h2>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/convencoes')}
-              className="text-xs"
-            >
-              Ver todas
-              <ArrowRight className="ml-1 h-3 w-3" />
-            </Button>
-          </div>
-          
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-            {convencoes.slice(0, 4).map((convencao, i) => (
-              <ConvencaoCard
-                key={i}
-                {...convencao}
-                onView={() => handleViewConvencao(convencao.numero)}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Dashboard - Estatísticas Regionais</h2>
-          </div>
-          
-          <div className="bg-card rounded-xl shadow-sm overflow-hidden border">
-            <div className="p-4">
-              {estatisticasRegionais.map((item, index) => (
-                <div 
-                  key={index}
-                  className={`flex items-center justify-between py-2 ${
-                    index !== estatisticasRegionais.length - 1 ? "border-b" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                      <MapPin className="h-4 w-4" />
-                    </span>
-                    <span className="font-medium">{item.regiao}</span>
-                  </div>
-                  <div className="flex gap-4 text-sm">
-                    <div className="text-right">
-                      <span className="block font-medium">{item.convencoesCount}</span>
-                      <span className="text-muted-foreground text-xs">Convenções</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="block font-medium">{item.sindicatosCount}</span>
-                      <span className="text-muted-foreground text-xs">Sindicatos</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+      {hasData ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Feed de Atualizações</h2>
+              <span className="text-xs text-muted-foreground">Atualizado agora</span>
             </div>
-            <div className="bg-muted/50 p-3 border-t">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/painel-sindicatos')}
-                className="w-full flex items-center justify-center gap-1 text-xs text-muted-foreground"
-              >
-                Ver painel completo
-                <ChevronRight className="h-3 w-3" />
-              </Button>
-            </div>
+            <FeedSindicatos />
           </div>
 
-          <div className="bg-card rounded-xl shadow-sm overflow-hidden border">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold">Categorias de Sindicatos</h3>
-            </div>
-            <div className="p-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm">Trabalhadores</span>
-                </div>
-                <span className="text-sm font-medium">156</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 text-violet-500" />
-                  <span className="text-sm">Empregadores</span>
-                </div>
-                <span className="text-sm font-medium">92</span>
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between w-full">
+                <h2 className="text-xl font-semibold">Convenções</h2>
+                <span className="text-xs text-muted-foreground">Atualizado agora</span>
               </div>
             </div>
+            
+            {convencoes.length > 0 ? (
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                {convencoes.slice(0, 4).map((convencao, i) => (
+                  <ConvencaoCard
+                    key={i}
+                    {...convencao}
+                    onView={() => handleViewConvencao(convencao.numero)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-muted/30 rounded-lg p-4 text-center">
+                <p className="text-muted-foreground">Nenhuma convenção encontrada</p>
+              </div>
+            )}
           </div>
         </div>
+      ) : (
+        renderEmptyState()
+      )}
 
-        <div className="md:col-span-2">
+      {hasData ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Dashboard - Feeds</h2>
-            <div className="bg-card rounded-xl shadow-sm overflow-hidden border p-4">
-              <p className="text-muted-foreground mb-4">Este painel mostra as atualizações mais recentes de feeds relacionados às convenções coletivas e sindicatos.</p>
-              
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <FileText className="h-4 w-4 text-primary" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between w-full">
+                <h2 className="text-xl font-semibold">Estatísticas Regionais</h2>
+                <span className="text-xs text-muted-foreground">Atualizado agora</span>
+              </div>
+            </div>
+            
+            <div className="bg-card rounded-xl shadow-sm overflow-hidden border">
+              <div className="p-4">
+                {estatisticasRegionais.length > 0 ? (
+                  estatisticasRegionais.map((item, index) => (
+                    <div 
+                      key={index}
+                      className={`flex items-center justify-between py-2 ${
+                        index !== estatisticasRegionais.length - 1 ? "border-b" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                          <MapPin className="h-4 w-4" />
+                        </span>
+                        <span className="font-medium">{item.regiao}</span>
+                      </div>
+                      <div className="flex gap-4 text-sm">
+                        <div className="text-right">
+                          <span className="block font-medium">{item.convencoesCount}</span>
+                          <span className="text-muted-foreground text-xs">Convenções</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="block font-medium">{item.sindicatosCount}</span>
+                          <span className="text-muted-foreground text-xs">Sindicatos</span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">Atualização de Convenção</p>
-                      <p className="text-xs text-muted-foreground">Sindicato dos Comerciários</p>
+                  ))
+                ) : (
+                  <div className="py-4 text-center text-muted-foreground">
+                    Nenhuma estatística disponível
+                  </div>
+                )}
+              </div>
+              <div className="bg-muted/50 p-3 border-t">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => navigate('/painel-sindicatos')}
+                  className="w-full flex items-center justify-center gap-1 text-xs text-muted-foreground"
+                >
+                  Ver painel completo
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-xl shadow-sm overflow-hidden border">
+              <div className="p-4 border-b">
+                <h3 className="font-semibold">Categorias de Sindicatos</h3>
+              </div>
+              <div className="p-4">
+                {hasData ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm">Trabalhadores</span>
+                      </div>
+                      <span className="text-sm font-medium">0</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4 text-violet-500" />
+                        <span className="text-sm">Empregadores</span>
+                      </div>
+                      <span className="text-sm font-medium">0</span>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-xs">
-                    Detalhes
-                  </Button>
-                </div>
-              ))}
-              
-              <Button variant="outline" size="sm" className="w-full mt-4 text-xs">
-                Ver mais atualizações
-              </Button>
+                ) : (
+                  <div className="py-2 text-center text-muted-foreground">
+                    Nenhuma categoria disponível
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
+          <div className="md:col-span-2">
+            {/* Dashboard - Feeds section removed as requested */}
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 };
