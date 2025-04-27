@@ -96,14 +96,14 @@ const mockSindicatosPorEstado = [
 
 const PainelSindicatos = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [estadoFilter, setEstadoFilter] = useState("");
-  const [categoriaFilter, setCategoriaSFilter] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("all");
+  const [categoriaFilter, setCategoriaSFilter] = useState("all");
   const [expandedSindicatos, setExpandedSindicatos] = useState<Record<string, boolean>>({});
 
   // Filter and search logic
   const filteredEstados = mockSindicatosPorEstado.filter(estado => {
     // Estado filter logic
-    if (estadoFilter && estado.sigla !== estadoFilter) return false;
+    if (estadoFilter !== "all" && estado.sigla !== estadoFilter) return false;
     
     // Search term logic
     if (searchTerm) {
@@ -157,7 +157,7 @@ const PainelSindicatos = () => {
               <SelectValue placeholder="Filtrar por estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os estados</SelectItem>
+              <SelectItem value="all">Todos os estados</SelectItem>
               {Object.entries(siglas_estados).map(([sigla, nome]) => (
                 <SelectItem key={sigla} value={sigla}>
                   {nome}
@@ -171,7 +171,7 @@ const PainelSindicatos = () => {
               <SelectValue placeholder="Filtrar por categoria" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as categorias</SelectItem>
+              <SelectItem value="all">Todas as categorias</SelectItem>
               <SelectItem value="hora-extra">Hora Extra</SelectItem>
               <SelectItem value="piso">Piso Salarial</SelectItem>
               <SelectItem value="beneficios">Benefícios</SelectItem>
@@ -234,7 +234,7 @@ const PainelSindicatos = () => {
                                     {sindicato.infoPrincipais.map((info, i) => (
                                       <tr key={i} className="even:bg-muted/30">
                                         {Object.values(info).map((value, j) => (
-                                          <td key={j} className="p-2 border">{value}</td>
+                                          <td key={j} className="p-2 border">{String(value)}</td>
                                         ))}
                                       </tr>
                                     ))}
@@ -274,7 +274,7 @@ const PainelSindicatos = () => {
                                     {sindicato.valoresHoraExtra.map((valor, i) => (
                                       <tr key={i} className="even:bg-muted/30">
                                         {Object.values(valor).map((v, j) => (
-                                          <td key={j} className="p-2 border">{v}</td>
+                                          <td key={j} className="p-2 border">{String(v)}</td>
                                         ))}
                                       </tr>
                                     ))}

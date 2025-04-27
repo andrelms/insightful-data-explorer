@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 // Tipos de consultas para o histórico
 type QueryType = 'all' | 'sindicato' | 'convencao' | 'cargo' | 'salario';

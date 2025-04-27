@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { FileUpload } from "@/components/dashboard/FileUpload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,15 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FileText, Database, UploadCloud, Check, RefreshCw } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+
 const ProcessarDados = () => {
   const [activeTab, setActiveTab] = useState("upload");
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processedFile, setProcessedFile] = useState<File | null>(null);
+
   const handleFileUploaded = (file: File) => {
     setProcessedFile(file);
     setActiveTab("processar");
   };
+
   const startProcessing = () => {
     if (!processedFile) return;
     setIsProcessing(true);
@@ -41,7 +45,9 @@ const ProcessarDados = () => {
       });
     }, 300);
   };
-  return <div className="space-y-6 animate-fade-in">
+
+  return (
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Processamento de Dados</h1>
         <p className="text-muted-foreground">
@@ -174,6 +180,8 @@ const ProcessarDados = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>;
+    </div>
+  );
 };
+
 export default ProcessarDados;
