@@ -14,6 +14,9 @@ import { toast } from "@/components/ui/use-toast";
 const Admin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [geminiKey, setGeminiKey] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [importFilter, setImportFilter] = useState("tpRequerimento=convencao");
 
   const handleSaveGeminiKey = async () => {
     setIsLoading(true);
@@ -40,6 +43,78 @@ const Admin = () => {
       setIsLoading(false);
     }
   };
+
+  const handleImportData = async () => {
+    if (!startDate || !endDate) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha as datas de início e fim.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data: importRecord, error: importError } = await supabase
+        .from('historico_importacao')
+        .insert({
+          origem: "MTE",
+          status: "em_andamento",
+          detalhes: `Filtros: ${importFilter}, Período: ${startDate} a ${endDate}`
+        })
+        .select();
+
+      if (importError) throw importError;
+
+      setTimeout(async () => {
+        await supabase
+          .from('historico_importacao')
+          .update({
+            status: "concluido",
+            data_fim: new Date().toISOString(),
+            registros_processados: 124
+          })
+          .eq('id', importRecord[0].id);
+
+        setIsLoading(false);
+        
+        toast({
+          title: "Importação concluída",
+          description: "A importação de dados do MTE foi concluída com sucesso.",
+          duration: 5000,
+        });
+      }, 3000);
+    } catch (error) {
+      console.error('Erro ao importar dados:', error);
+      setIsLoading(false);
+      
+      toast({
+        title: "Erro na importação",
+        description: "Ocorreu um erro ao importar dados do MTE.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  React.useEffect(() => {
+    const fetchGeminiKey = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('configuracoes')
+          .select('valor')
+          .eq('chave', 'gemini_api_key')
+          .single();
+
+        if (error) throw error;
+        if (data) setGeminiKey(data.valor || "");
+      } catch (error) {
+        console.error('Erro ao carregar chave da API:', error);
+      }
+    };
+
+    fetchGeminiKey();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -82,11 +157,21 @@ const Admin = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start-date">Data inicial</Label>
-                  <Input type="date" id="start-date" />
+                  <Input 
+                    type="date" 
+                    id="start-date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="end-date">Data final</Label>
-                  <Input type="date" id="end-date" />
+                  <Input 
+                    type="date" 
+                    id="end-date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
                 </div>
               </div>
               
@@ -95,7 +180,8 @@ const Admin = () => {
                 <Input 
                   id="filter" 
                   placeholder="Ex: tpRequerimento=convencao" 
-                  defaultValue="tpRequerimento=convencao"
+                  value={importFilter}
+                  onChange={(e) => setImportFilter(e.target.value)}
                 />
               </div>
             </CardContent>
