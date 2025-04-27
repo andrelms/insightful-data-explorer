@@ -84,5 +84,5 @@ export function DatabaseManagement() {
         </div>
       </CardContent>
     </Card>
-  </div>
-};
+  );
+}
