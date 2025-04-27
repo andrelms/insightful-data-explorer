@@ -9,7 +9,221 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      configuracoes: {
+        Row: {
+          chave: string
+          descricao: string | null
+          id: string
+          updated_at: string
+          valor: string | null
+        }
+        Insert: {
+          chave: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string
+          valor?: string | null
+        }
+        Update: {
+          chave?: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string
+          valor?: string | null
+        }
+        Relationships: []
+      }
+      convencoes: {
+        Row: {
+          abrangencia: string | null
+          created_at: string
+          file_id: string | null
+          id: string
+          sindicato_id: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          abrangencia?: string | null
+          created_at?: string
+          file_id?: string | null
+          id?: string
+          sindicato_id?: string | null
+          tipo: string
+          titulo: string
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          abrangencia?: string | null
+          created_at?: string
+          file_id?: string | null
+          id?: string
+          sindicato_id?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convencoes_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "uploaded_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "convencoes_sindicato_id_fkey"
+            columns: ["sindicato_id"]
+            isOneToOne: false
+            referencedRelation: "sindicatos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_noticias: {
+        Row: {
+          conteudo: string | null
+          created_at: string
+          data_publicacao: string | null
+          fonte: string | null
+          id: string
+          sindicato_id: string | null
+          titulo: string
+          url: string | null
+        }
+        Insert: {
+          conteudo?: string | null
+          created_at?: string
+          data_publicacao?: string | null
+          fonte?: string | null
+          id?: string
+          sindicato_id?: string | null
+          titulo: string
+          url?: string | null
+        }
+        Update: {
+          conteudo?: string | null
+          created_at?: string
+          data_publicacao?: string | null
+          fonte?: string | null
+          id?: string
+          sindicato_id?: string | null
+          titulo?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_noticias_sindicato_id_fkey"
+            columns: ["sindicato_id"]
+            isOneToOne: false
+            referencedRelation: "sindicatos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historico_importacao: {
+        Row: {
+          data_fim: string | null
+          data_inicio: string
+          detalhes: string | null
+          id: string
+          origem: string | null
+          registros_processados: number | null
+          status: string | null
+        }
+        Insert: {
+          data_fim?: string | null
+          data_inicio?: string
+          detalhes?: string | null
+          id?: string
+          origem?: string | null
+          registros_processados?: number | null
+          status?: string | null
+        }
+        Update: {
+          data_fim?: string | null
+          data_inicio?: string
+          detalhes?: string | null
+          id?: string
+          origem?: string | null
+          registros_processados?: number | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      sindicatos: {
+        Row: {
+          categoria: string | null
+          cnpj: string | null
+          created_at: string
+          estado: string | null
+          id: string
+          nome: string
+          site: string | null
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string | null
+          cnpj?: string | null
+          created_at?: string
+          estado?: string | null
+          id?: string
+          nome: string
+          site?: string | null
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string | null
+          cnpj?: string | null
+          created_at?: string
+          estado?: string | null
+          id?: string
+          nome?: string
+          site?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      uploaded_files: {
+        Row: {
+          file_path: string | null
+          file_size: number
+          file_type: string
+          filename: string
+          id: string
+          processed: boolean | null
+          processed_at: string | null
+          uploaded_at: string
+        }
+        Insert: {
+          file_path?: string | null
+          file_size: number
+          file_type: string
+          filename: string
+          id?: string
+          processed?: boolean | null
+          processed_at?: string | null
+          uploaded_at?: string
+        }
+        Update: {
+          file_path?: string | null
+          file_size?: number
+          file_type?: string
+          filename?: string
+          id?: string
+          processed?: boolean | null
+          processed_at?: string | null
+          uploaded_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

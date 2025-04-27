@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,17 +6,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Upload, Database, AlertTriangle } from "lucide-react";
+import { RefreshCw, Upload, Database, AlertTriangle, Settings, FileText } from "lucide-react";
+import { DatabaseManagement } from "@/components/admin/DatabaseManagement";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 const Admin = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [geminiKey, setGeminiKey] = useState("");
 
-  const handleImportData = () => {
+  const handleSaveGeminiKey = async () => {
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const { error } = await supabase
+        .from('configuracoes')
+        .update({ valor: geminiKey })
+        .eq('chave', 'gemini_api_key');
+
+      if (error) throw error;
+
+      toast({
+        title: "Configuração salva",
+        description: "A chave da API do Gemini foi atualizada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar chave:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a chave da API.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-      // Aqui você poderia adicionar um toast de sucesso
-    }, 2000);
+    }
   };
 
   return (
@@ -30,13 +51,25 @@ const Admin = () => {
       </div>
 
       <Tabs defaultValue="import" className="w-full">
-        <TabsList>
-          <TabsTrigger value="import">Importação</TabsTrigger>
-          <TabsTrigger value="database">Banco de Dados</TabsTrigger>
-          <TabsTrigger value="logs">Logs do Sistema</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="import">
+            <Upload className="h-4 w-4 mr-2" />
+            Importação
+          </TabsTrigger>
+          <TabsTrigger value="database">
+            <Database className="h-4 w-4 mr-2" />
+            Banco de Dados
+          </TabsTrigger>
+          <TabsTrigger value="config">
+            <Settings className="h-4 w-4 mr-2" />
+            Configurações
+          </TabsTrigger>
+          <TabsTrigger value="logs">
+            <FileText className="h-4 w-4 mr-2" />
+            Logs
+          </TabsTrigger>
         </TabsList>
         
-        {/* Tab de Importação */}
         <TabsContent value="import" className="space-y-4">
           <Card>
             <CardHeader>
@@ -135,81 +168,43 @@ const Admin = () => {
           </Card>
         </TabsContent>
         
-        {/* Tab de Banco de Dados */}
-        <TabsContent value="database" className="space-y-4">
+        <TabsContent value="database">
+          <div className="grid gap-6">
+            <DatabaseManagement />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="config">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
-                Status do Banco de Dados
-              </CardTitle>
+              <CardTitle>Configurações do Sistema</CardTitle>
               <CardDescription>
-                Informações sobre o banco de dados do sistema.
+                Gerencie as chaves de API e outras configurações do sistema.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-muted/40 p-4 rounded-md">
-                  <p className="font-medium mb-2">Estatísticas</p>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex justify-between">
-                      <span>Total de tabelas:</span>
-                      <span>8</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>Total de registros:</span>
-                      <span>4.234</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>Tamanho do banco:</span>
-                      <span>256 MB</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>Último backup:</span>
-                      <span>25/04/2023 00:00</span>
-                    </li>
-                  </ul>
-                </div>
-                
-                <div className="bg-muted/40 p-4 rounded-md">
-                  <p className="font-medium mb-2">Tabelas principais</p>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex justify-between">
-                      <span>sindicatos</span>
-                      <span>125 registros</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>convencoes</span>
-                      <span>856 registros</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>clausulas</span>
-                      <span>3.245 registros</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>importacoes</span>
-                      <span>8 registros</span>
-                    </li>
-                  </ul>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="gemini-key">Chave da API do Google Gemini</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="gemini-key"
+                    type="password"
+                    value={geminiKey}
+                    onChange={(e) => setGeminiKey(e.target.value)}
+                    placeholder="Insira sua chave da API do Gemini"
+                  />
+                  <Button 
+                    onClick={handleSaveGeminiKey}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Salvando..." : "Salvar"}
+                  </Button>
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Atualizar Índices
-              </Button>
-              <Button variant="outline" size="sm">
-                Exportar Dados
-              </Button>
-              <Button variant="outline" size="sm">
-                Criar Backup
-              </Button>
-            </CardFooter>
           </Card>
         </TabsContent>
         
-        {/* Tab de Logs */}
         <TabsContent value="logs" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
