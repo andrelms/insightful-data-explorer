@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      beneficios: {
+        Row: {
+          convenio_id: string
+          created_at: string | null
+          descricao: string | null
+          id: string
+          tipo: string
+          updated_at: string | null
+          valor: string | null
+        }
+        Insert: {
+          convenio_id: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          tipo: string
+          updated_at?: string | null
+          valor?: string | null
+        }
+        Update: {
+          convenio_id?: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          tipo?: string
+          updated_at?: string | null
+          valor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_beneficios_convencoes"
+            columns: ["convenio_id"]
+            isOneToOne: false
+            referencedRelation: "convencoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracoes: {
         Row: {
           chave: string
@@ -36,37 +74,64 @@ export type Database = {
       convencoes: {
         Row: {
           abrangencia: string | null
+          adicional_noturno: string | null
+          assistencia_medica: boolean | null
           created_at: string
+          dados_brutos: Json | null
+          data_base: string | null
+          estado: string | null
           file_id: string | null
           id: string
+          seguro_vida: boolean | null
           sindicato_id: string | null
           tipo: string
           titulo: string
+          uniforme: boolean | null
           updated_at: string
+          vale_refeicao: string | null
+          vale_refeicao_valor: number | null
           vigencia_fim: string | null
           vigencia_inicio: string | null
         }
         Insert: {
           abrangencia?: string | null
+          adicional_noturno?: string | null
+          assistencia_medica?: boolean | null
           created_at?: string
+          dados_brutos?: Json | null
+          data_base?: string | null
+          estado?: string | null
           file_id?: string | null
           id?: string
+          seguro_vida?: boolean | null
           sindicato_id?: string | null
           tipo: string
           titulo: string
+          uniforme?: boolean | null
           updated_at?: string
+          vale_refeicao?: string | null
+          vale_refeicao_valor?: number | null
           vigencia_fim?: string | null
           vigencia_inicio?: string | null
         }
         Update: {
           abrangencia?: string | null
+          adicional_noturno?: string | null
+          assistencia_medica?: boolean | null
           created_at?: string
+          dados_brutos?: Json | null
+          data_base?: string | null
+          estado?: string | null
           file_id?: string | null
           id?: string
+          seguro_vida?: boolean | null
           sindicato_id?: string | null
           tipo?: string
           titulo?: string
+          uniforme?: boolean | null
           updated_at?: string
+          vale_refeicao?: string | null
+          vale_refeicao_valor?: number | null
           vigencia_fim?: string | null
           vigencia_inicio?: string | null
         }
@@ -157,6 +222,123 @@ export type Database = {
           status?: string | null
         }
         Relationships: []
+      }
+      licencas: {
+        Row: {
+          convenio_id: string
+          created_at: string | null
+          descricao: string | null
+          dias: number | null
+          id: string
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          convenio_id: string
+          created_at?: string | null
+          descricao?: string | null
+          dias?: number | null
+          id?: string
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          convenio_id?: string
+          created_at?: string | null
+          descricao?: string | null
+          dias?: number | null
+          id?: string
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_licencas_convencoes"
+            columns: ["convenio_id"]
+            isOneToOne: false
+            referencedRelation: "convencoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      particularidades: {
+        Row: {
+          convenio_id: string
+          created_at: string | null
+          descricao: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          convenio_id: string
+          created_at?: string | null
+          descricao: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          convenio_id?: string
+          created_at?: string | null
+          descricao?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_particularidades_convencoes"
+            columns: ["convenio_id"]
+            isOneToOne: false
+            referencedRelation: "convencoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pisos_salariais: {
+        Row: {
+          carga_horaria: string | null
+          cargo: string
+          convenio_id: string | null
+          created_at: string | null
+          id: string
+          piso_salarial: number | null
+          updated_at: string | null
+          valor_hora_extra_100: number | null
+          valor_hora_extra_50: number | null
+          valor_hora_normal: number | null
+        }
+        Insert: {
+          carga_horaria?: string | null
+          cargo: string
+          convenio_id?: string | null
+          created_at?: string | null
+          id?: string
+          piso_salarial?: number | null
+          updated_at?: string | null
+          valor_hora_extra_100?: number | null
+          valor_hora_extra_50?: number | null
+          valor_hora_normal?: number | null
+        }
+        Update: {
+          carga_horaria?: string | null
+          cargo?: string
+          convenio_id?: string | null
+          created_at?: string | null
+          id?: string
+          piso_salarial?: number | null
+          updated_at?: string | null
+          valor_hora_extra_100?: number | null
+          valor_hora_extra_50?: number | null
+          valor_hora_normal?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_pisos_convencoes"
+            columns: ["convenio_id"]
+            isOneToOne: false
+            referencedRelation: "convencoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sindicatos: {
         Row: {
