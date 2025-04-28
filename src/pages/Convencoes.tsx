@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SearchBar } from "@/components/dashboard/SearchBar";
 import { ConvencaoCard } from "@/components/dashboard/ConvencaoCard";
 import { useNavigate } from "react-router-dom";
@@ -10,94 +10,164 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { RefreshCw } from "lucide-react";
+
+interface Convencao {
+  id: string;
+  title: string;
+  titulo: string;
+  numero: string;
+  ano: number;
+  sindicatos: string[];
+  vigenciaInicio: string;
+  vigenciaFim: string;
+  estado: string;
+  sindicato_id?: string;
+}
 
 const Convencoes = () => {
   const navigate = useNavigate();
   const [filterYear, setFilterYear] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [convencoes, setConvencoes] = useState<Convencao[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [years, setYears] = useState<string[]>([]);
 
-  // Mock data for convenções
-  const mockConvencoes = [
-    {
-      title: "CONVENÇÃO COLETIVA DE TRABALHO 2023/2024 - SINDICATO DOS EMPREGADOS NO COMÉRCIO",
-      numero: "MG001234/2023",
-      ano: 2023,
-      sindicatos: ["COMERCIÁRIOS", "EMPREGADORES"],
-      vigenciaInicio: "2023-06-01",
-      vigenciaFim: "2024-05-31"
-    },
-    {
-      title: "CONVENÇÃO COLETIVA DE TRABALHO 2022/2024 - METALÚRGICOS E INDÚSTRIAS METALÚRGICAS",
-      numero: "MG000789/2022",
-      ano: 2022,
-      sindicatos: ["METALÚRGICOS", "INDÚSTRIA METALÚRGICA"],
-      vigenciaInicio: "2022-09-01",
-      vigenciaFim: "2024-08-31"
-    },
-    {
-      title: "CONVENÇÃO COLETIVA DE TRABALHO 2023/2025 - PROFESSORES E ESTABELECIMENTOS DE ENSINO",
-      numero: "MG002345/2023",
-      ano: 2023,
-      sindicatos: ["PROFESSORES", "ESCOLAS PARTICULARES"],
-      vigenciaInicio: "2023-03-01",
-      vigenciaFim: "2025-02-28"
-    },
-    {
-      title: "CONVENÇÃO COLETIVA DE TRABALHO 2022/2023 - TRABALHADORES EM TRANSPORTES RODOVIÁRIOS",
-      numero: "MG003456/2022",
-      ano: 2022,
-      sindicatos: ["RODOVIÁRIOS", "EMPRESAS DE TRANSPORTE"],
-      vigenciaInicio: "2022-05-01",
-      vigenciaFim: "2023-04-30"
-    },
-    {
-      title: "CONVENÇÃO COLETIVA DE TRABALHO 2023/2024 - VIGILANTES E EMPRESAS DE SEGURANÇA",
-      numero: "MG004567/2023",
-      ano: 2023,
-      sindicatos: ["VIGILANTES", "SEGURANÇA PRIVADA"],
-      vigenciaInicio: "2023-01-01",
-      vigenciaFim: "2024-12-31"
-    },
-    {
-      title: "CONVENÇÃO COLETIVA DE TRABALHO 2023/2024 - TRABALHADORES EM SAÚDE",
-      numero: "MG005678/2023",
-      ano: 2023,
-      sindicatos: ["PROFISSIONAIS DE SAÚDE", "HOSPITAIS"],
-      vigenciaInicio: "2023-04-01",
-      vigenciaFim: "2024-03-31"
-    },
-    {
-      title: "CONVENÇÃO COLETIVA DE TRABALHO 2021/2023 - BANCÁRIOS E INSTITUIÇÕES FINANCEIRAS",
-      numero: "MG006789/2021",
-      ano: 2021,
-      sindicatos: ["BANCÁRIOS", "BANCOS"],
-      vigenciaInicio: "2021-09-01",
-      vigenciaFim: "2023-08-31"
-    },
-    {
-      title: "CONVENÇÃO COLETIVA DE TRABALHO 2022/2024 - CONSTRUÇÃO CIVIL",
-      numero: "MG007890/2022",
-      ano: 2022,
-      sindicatos: ["TRABALHADORES DA CONSTRUÇÃO CIVIL", "CONSTRUTORAS"],
-      vigenciaInicio: "2022-08-01",
-      vigenciaFim: "2024-07-31"
+  useEffect(() => {
+    fetchConvencoes();
+  }, []);
+
+  const fetchConvencoes = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('convencoes')
+        .select(`
+          id, 
+          titulo, 
+          tipo,
+          vigencia_inicio, 
+          vigencia_fim, 
+          data_base,
+          estado,
+          sindicato_id,
+          sindicatos (nome, cnpj)
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        // Transform the data to match our component's expected format
+        const transformedData: Convencao[] = data.map(item => {
+          const vigenciaInicio = item.vigencia_inicio || '';
+          const ano = vigenciaInicio 
+            ? new Date(vigenciaInicio).getFullYear() 
+            : new Date().getFullYear();
+            
+          return {
+            id: item.id,
+            title: item.titulo,
+            titulo: item.titulo,
+            numero: item.id.substring(0, 8),
+            ano,
+            sindicatos: [item.sindicatos?.nome || 'Sindicato não especificado'],
+            vigenciaInicio: item.vigencia_inicio || '',
+            vigenciaFim: item.vigencia_fim || '',
+            estado: item.estado || '',
+            sindicato_id: item.sindicato_id
+          };
+        });
+        
+        setConvencoes(transformedData);
+        
+        // Extract unique years for the filter
+        const uniqueYears = Array.from(new Set(
+          transformedData
+            .map(c => c.ano)
+            .filter(year => !isNaN(year))
+            .sort((a, b) => b - a) // Sort in descending order
+        )).map(year => year.toString());
+        
+        setYears(uniqueYears);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar convenções:", error);
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  const handleSearch = (query: string) => {
-    console.log("Searching for:", query);
-    // Implementação futura: chamar a API de busca
   };
 
-  const handleViewConvencao = (numero: string) => {
-    navigate(`/convencoes/${numero}`);
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) {
+      fetchConvencoes();
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('convencoes')
+        .select(`
+          id, 
+          titulo, 
+          tipo,
+          vigencia_inicio, 
+          vigencia_fim, 
+          data_base,
+          estado,
+          sindicato_id,
+          sindicatos (nome, cnpj)
+        `)
+        .or(`titulo.ilike.%${query}%,sindicatos.nome.ilike.%${query}%`)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const transformedData: Convencao[] = data.map(item => {
+          const vigenciaInicio = item.vigencia_inicio || '';
+          const ano = vigenciaInicio 
+            ? new Date(vigenciaInicio).getFullYear() 
+            : new Date().getFullYear();
+            
+          return {
+            id: item.id,
+            title: item.titulo,
+            titulo: item.titulo,
+            numero: item.id.substring(0, 8),
+            ano,
+            sindicatos: [item.sindicatos?.nome || 'Sindicato não especificado'],
+            vigenciaInicio: item.vigencia_inicio || '',
+            vigenciaFim: item.vigencia_fim || '',
+            estado: item.estado || '',
+            sindicato_id: item.sindicato_id
+          };
+        });
+        
+        setConvencoes(transformedData);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar convenções:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewConvencao = (id: string) => {
+    navigate(`/convencoes/${id}`);
   };
 
   // Filtrar convenções por ano e status
-  const filteredConvencoes = mockConvencoes.filter(convencao => {
+  const filteredConvencoes = convencoes.filter(convencao => {
     const matchesYear = filterYear === "all" || convencao.ano.toString() === filterYear;
     
-    const isActive = new Date() <= new Date(convencao.vigenciaFim);
+    const isActive = convencao.vigenciaFim ? new Date() <= new Date(convencao.vigenciaFim) : true;
     const matchesStatus = filterStatus === "all" || 
       (filterStatus === "active" && isActive) || 
       (filterStatus === "expired" && !isActive);
@@ -121,10 +191,9 @@ const Convencoes = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os anos</SelectItem>
-                <SelectItem value="2023">2023</SelectItem>
-                <SelectItem value="2022">2022</SelectItem>
-                <SelectItem value="2021">2021</SelectItem>
-                <SelectItem value="2020">2020</SelectItem>
+                {years.map(year => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             
@@ -142,21 +211,27 @@ const Convencoes = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {filteredConvencoes.map((convencao, i) => (
-          <ConvencaoCard
-            key={i}
-            {...convencao}
-            onView={() => handleViewConvencao(convencao.numero)}
-          />
-        ))}
-        
-        {filteredConvencoes.length === 0 && (
-          <div className="col-span-3 py-10 text-center text-muted-foreground">
-            Nenhuma convenção encontrada com os filtros selecionados.
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {filteredConvencoes.map((convencao) => (
+            <ConvencaoCard
+              key={convencao.id}
+              {...convencao}
+              onView={() => handleViewConvencao(convencao.id)}
+            />
+          ))}
+          
+          {filteredConvencoes.length === 0 && (
+            <div className="col-span-3 py-10 text-center text-muted-foreground">
+              Nenhuma convenção encontrada com os filtros selecionados.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
