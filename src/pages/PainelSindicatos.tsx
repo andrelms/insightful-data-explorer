@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // Dicionário de siglas dos estados
-const siglas_estados = {
+const siglas_estados: {[key: string]: string} = {
   'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia',
   'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás',
   'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais',
@@ -108,7 +108,7 @@ const PainelSindicatos = () => {
     // Search term logic
     if (searchTerm) {
       const termLower = searchTerm.toLowerCase();
-      const estadoMatches = siglas_estados[estado.sigla as keyof typeof siglas_estados]?.toLowerCase().includes(termLower);
+      const estadoMatches = siglas_estados[estado.sigla]?.toLowerCase().includes(termLower);
       const sindicatoMatches = estado.sindicatos.some(sind => 
         sind.nome.toLowerCase().includes(termLower) || 
         sind.infoPrincipais.some(info => 
@@ -187,7 +187,7 @@ const PainelSindicatos = () => {
               <div className="bg-gradient-to-r from-blue-600 to-violet-600 text-white p-4">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  <h2 className="text-xl font-bold">{siglas_estados[estado.sigla as keyof typeof siglas_estados]}</h2>
+                  <h2 className="text-xl font-bold">{siglas_estados[estado.sigla]}</h2>
                 </div>
                 <div className="text-sm opacity-80 mt-1">
                   {estado.sindicatos.length} Sindicato{estado.sindicatos.length !== 1 ? 's' : ''}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,7 +59,11 @@ export function ImportSection() {
     }
   };
 
-  const handleImportData = async () => {
+  function handleOpenMTEWebsite() {
+    window.open("https://www3.mte.gov.br/sistemas/mediador/consultarins", "_blank");
+  }
+
+  function handleImportData() {
     if (!startDate || !endDate) {
       toast({
         title: "Campos obrigatórios",
@@ -81,39 +84,41 @@ export function ImportSection() {
         url: "https://www3.mte.gov.br/sistemas/mediador/consultarins"
       };
 
-      const { data: importRecord, error: importError } = await supabase
+      supabase
         .from('historico_importacao')
         .insert({
           origem: "MTE",
           status: "em_andamento",
           detalhes: JSON.stringify(detalhes)
         })
-        .select();
+        .select()
+        .then(({ data: importRecord, error: importError }) => {
+          if (importError) throw importError;
 
-      if (importError) throw importError;
+          // Simulate import process (would be replaced with actual API call in production)
+          setTimeout(() => {
+            supabase
+              .from('historico_importacao')
+              .update({
+                status: "concluido",
+                data_fim: new Date().toISOString(),
+                registros_processados: Math.floor(Math.random() * 100) + 50 // Random number between 50-150
+              })
+              .eq('id', importRecord![0].id)
+              .then(() => {
+                setIsLoading(false);
+                
+                toast({
+                  title: "Importação concluída",
+                  description: "A importação de dados do MTE foi concluída com sucesso.",
+                  duration: 5000,
+                });
 
-      // Simulate import process (would be replaced with actual API call in production)
-      setTimeout(async () => {
-        await supabase
-          .from('historico_importacao')
-          .update({
-            status: "concluido",
-            data_fim: new Date().toISOString(),
-            registros_processados: Math.floor(Math.random() * 100) + 50 // Random number between 50-150
-          })
-          .eq('id', importRecord![0].id);
-
-        setIsLoading(false);
-        
-        toast({
-          title: "Importação concluída",
-          description: "A importação de dados do MTE foi concluída com sucesso.",
-          duration: 5000,
+                // Refresh page to show updated history
+                window.location.reload();
+              });
+          }, 3000);
         });
-
-        // Refresh page to show updated history
-        window.location.reload();
-      }, 3000);
     } catch (error) {
       console.error('Erro ao importar dados:', error);
       setIsLoading(false);
@@ -124,9 +129,15 @@ export function ImportSection() {
         variant: "destructive",
       });
     }
-  };
+  }
 
-  const handleFileUpload = async () => {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  }
+
+  function handleFileUpload() {
     if (!selectedFile) {
       toast({
         title: "Nenhum arquivo selecionado",
@@ -144,83 +155,97 @@ export function ImportSection() {
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `uploads/${fileName}`;
       
-      const { error: uploadError } = await supabase.storage
+      supabase.storage
         .from('uploaded_files')
-        .upload(filePath, selectedFile);
-      
-      if (uploadError) throw uploadError;
-      
-      // 2. Registrar o arquivo na tabela uploaded_files
-      const { data: fileRecord, error: fileError } = await supabase
-        .from('uploaded_files')
-        .insert({
-          filename: selectedFile.name,
-          file_path: filePath,
-          file_type: selectedFile.type,
-          file_size: selectedFile.size,
-          processed: false
+        .upload(filePath, selectedFile)
+        .then(({ error: uploadError }) => {
+          if (uploadError) throw uploadError;
+          
+          // 2. Registrar o arquivo na tabela uploaded_files
+          return supabase
+            .from('uploaded_files')
+            .insert({
+              filename: selectedFile.name,
+              file_path: filePath,
+              file_type: selectedFile.type,
+              file_size: selectedFile.size,
+              processed: false
+            })
+            .select();
         })
-        .select();
-      
-      if (fileError) throw fileError;
-      
-      // 3. Registrar a importação no histórico
-      const detalhes = {
-        tipo: "arquivo",
-        nome_arquivo: selectedFile.name,
-        tamanho: `${(selectedFile.size / 1024).toFixed(2)} KB`,
-        formato: selectedFile.type,
-        estado: estadoSelecionado || "Não especificado"
-      };
-      
-      const { data: importRecord, error: importError } = await supabase
-        .from('historico_importacao')
-        .insert({
-          origem: "Upload Manual",
-          status: "em_andamento",
-          detalhes: JSON.stringify(detalhes)
+        .then(({ data: fileRecord, error: fileError }) => {
+          if (fileError) throw fileError;
+          
+          // 3. Registrar a importação no histórico
+          const detalhes = {
+            tipo: "arquivo",
+            nome_arquivo: selectedFile.name,
+            tamanho: `${(selectedFile.size / 1024).toFixed(2)} KB`,
+            formato: selectedFile.type,
+            estado: estadoSelecionado || "Não especificado"
+          };
+          
+          return supabase
+            .from('historico_importacao')
+            .insert({
+              origem: "Upload Manual",
+              status: "em_andamento",
+              detalhes: JSON.stringify(detalhes)
+            })
+            .select();
         })
-        .select();
-      
-      if (importError) throw importError;
-      
-      // 4. Simular processamento do arquivo
-      setTimeout(async () => {
-        // Atualizar o status do arquivo para processado
-        await supabase
-          .from('uploaded_files')
-          .update({
-            processed: true,
-            processed_at: new Date().toISOString()
-          })
-          .eq('id', fileRecord![0].id);
-        
-        // Atualizar o registro de importação
-        await supabase
-          .from('historico_importacao')
-          .update({
-            status: "concluido",
-            data_fim: new Date().toISOString(),
-            registros_processados: Math.floor(Math.random() * 30) + 10 // Número aleatório entre 10-40
-          })
-          .eq('id', importRecord![0].id);
-        
-        setIsFileUploading(false);
-        setSelectedFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-        
-        toast({
-          title: "Arquivo processado",
-          description: "O arquivo foi enviado e processado com sucesso.",
-          duration: 5000,
+        .then(({ data: importRecord, error: importError }) => {
+          if (importError) throw importError;
+          
+          // 4. Simular processamento do arquivo
+          setTimeout(() => {
+            // Atualizar o status do arquivo para processado
+            supabase
+              .from('uploaded_files')
+              .update({
+                processed: true,
+                processed_at: new Date().toISOString()
+              })
+              .eq('filename', selectedFile.name)
+              .then(() => {
+                // Atualizar o registro de importação
+                return supabase
+                  .from('historico_importacao')
+                  .update({
+                    status: "concluido",
+                    data_fim: new Date().toISOString(),
+                    registros_processados: Math.floor(Math.random() * 30) + 10 // Número aleatório entre 10-40
+                  })
+                  .eq('id', importRecord![0].id);
+              })
+              .then(() => {
+                setIsFileUploading(false);
+                setSelectedFile(null);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
+                
+                toast({
+                  title: "Arquivo processado",
+                  description: "O arquivo foi enviado e processado com sucesso.",
+                  duration: 5000,
+                });
+                
+                // Atualizar a listagem
+                window.location.reload();
+              });
+          }, 3000);
+        })
+        .catch((error) => {
+          console.error('Erro ao processar arquivo:', error);
+          setIsFileUploading(false);
+          
+          toast({
+            title: "Erro ao processar arquivo",
+            description: "Ocorreu um erro ao processar o arquivo.",
+            variant: "destructive",
+          });
         });
-        
-        // Atualizar a listagem
-        window.location.reload();
-      }, 3000);
-      
     } catch (error) {
       console.error('Erro ao processar arquivo:', error);
       setIsFileUploading(false);
@@ -231,17 +256,7 @@ export function ImportSection() {
         variant: "destructive",
       });
     }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const handleOpenMTEWebsite = () => {
-    window.open("https://www3.mte.gov.br/sistemas/mediador/consultarins", "_blank");
-  };
+  }
 
   useEffect(() => {
     // Verificar se o bucket existe, caso não, criar
@@ -321,7 +336,7 @@ export function ImportSection() {
                     <SelectValue placeholder="Selecione um estado (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os estados</SelectItem>
+                    <SelectItem value="todos">Todos os estados</SelectItem>
                     {estados.map((estado) => (
                       <SelectItem key={estado.valor} value={estado.valor}>
                         {estado.nome}
@@ -410,7 +425,7 @@ export function ImportSection() {
                     <SelectValue placeholder="Selecione um estado (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Não especificado</SelectItem>
+                    <SelectItem value="nao-especificado">Não especificado</SelectItem>
                     {estados.map((estado) => (
                       <SelectItem key={estado.valor} value={estado.valor}>
                         {estado.nome}
