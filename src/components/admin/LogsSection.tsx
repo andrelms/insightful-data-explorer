@@ -13,7 +13,7 @@ interface LogEntry {
   timestamp: string;
   level: "INFO" | "WARN" | "ERROR";
   message: string;
-  module: string;
+  module: string | null;
 }
 
 export function LogsSection() {
@@ -23,29 +23,26 @@ export function LogsSection() {
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
-      // Verificar se existe a tabela system_logs no banco
-      const { data: tableExists } = await supabase
+      // Buscar logs do banco de dados
+      const { data, error } = await supabase
         .from('system_logs')
-        .select('id')
-        .limit(1);
+        .select('id, timestamp, level, message, module')
+        .order('timestamp', { ascending: false })
+        .limit(20);
       
-      if (tableExists && tableExists.length > 0) {
-        // Buscar logs do banco de dados
-        const { data, error } = await supabase
-          .from('system_logs')
-          .select('*')
-          .order('timestamp', { ascending: false })
-          .limit(20);
-        
-        if (error) throw error;
-        if (data && data.length > 0) {
-          setLogs(data as LogEntry[]);
-        } else {
-          // Se não há dados, usar logs mockados
-          setLogs(getMockLogs());
-        }
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        // Converter para o formato LogEntry
+        const logEntries: LogEntry[] = data.map(log => ({
+          id: log.id,
+          timestamp: new Date(log.timestamp).toLocaleString(),
+          level: log.level as "INFO" | "WARN" | "ERROR",
+          message: log.message,
+          module: log.module
+        }));
+        setLogs(logEntries);
       } else {
-        // Se a tabela não existe, usar logs mockados
         setLogs(getMockLogs());
       }
     } catch (error) {
@@ -126,6 +123,30 @@ export function LogsSection() {
         description: "Não foi possível exportar os logs.",
         variant: "destructive",
       });
+    }
+  };
+
+  // Função para inserir um novo log no banco
+  const addSystemLog = async (level: "INFO" | "WARN" | "ERROR", message: string, module: string) => {
+    try {
+      const { error } = await supabase
+        .from('system_logs')
+        .insert([{ 
+          level,
+          message,
+          module,
+          timestamp: new Date().toISOString() 
+        }]);
+      
+      if (error) throw error;
+      
+      // Atualizar a lista de logs após a inserção
+      fetchLogs();
+      
+      return true;
+    } catch (error) {
+      console.error('Erro ao adicionar log:', error);
+      return false;
     }
   };
 

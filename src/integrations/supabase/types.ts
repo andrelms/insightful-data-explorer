@@ -373,6 +373,36 @@ export type Database = {
         }
         Relationships: []
       }
+      system_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          id: string
+          level: string
+          message: string
+          module: string | null
+          timestamp: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level: string
+          message: string
+          module?: string | null
+          timestamp?: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level?: string
+          message?: string
+          module?: string | null
+          timestamp?: string
+        }
+        Relationships: []
+      }
       uploaded_files: {
         Row: {
           file_path: string | null

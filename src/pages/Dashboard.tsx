@@ -1,3 +1,4 @@
+
 import { SearchBar } from "@/components/dashboard/SearchBar";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ConvencaoCard } from "@/components/dashboard/ConvencaoCard";
@@ -8,6 +9,21 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+
+interface RegionalStat {
+  regiao: string;
+  sindicatosCount: number;
+  convencoesCount: number;
+}
+
+interface ConvencaoData {
+  title: string;
+  numero: string;
+  ano: number;
+  sindicatos: string[];
+  vigenciaInicio: string | null;
+  vigenciaFim: string | null;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -33,14 +49,18 @@ const Dashboard = () => {
     },
     {
       title: "Última Atualização",
-      value: "Carregando...",
+      value: "0",
       icon: <RefreshCw className="h-4 w-4" />,
       description: "Base atualizada diariamente"
     }
   ]);
-  const [convencoes, setConvencoes] = useState([]);
-  const [estatisticasRegionais, setEstatisticasRegionais] = useState([]);
+  const [convencoes, setConvencoes] = useState<ConvencaoData[]>([]);
+  const [estatisticasRegionais, setEstatisticasRegionais] = useState<RegionalStat[]>([]);
   const [hasData, setHasData] = useState(false);
+  const [sindicatosPorCategoria, setSindicatosPorCategoria] = useState({
+    trabalhadores: 0,
+    empregadores: 0
+  });
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -63,12 +83,12 @@ const Dashboard = () => {
       let totalConvencoes = convencoesResult.data?.length || 0;
       const now = new Date();
       const convencoesVigentes = hasConvencoes 
-        ? convencoesResult.data.filter(c => new Date(c.vigencia_fim) >= now).length
+        ? convencoesResult.data.filter(c => c.vigencia_fim && new Date(c.vigencia_fim) >= now).length
         : 0;
       
       // Convenções pendentes são aquelas recentemente importadas sem dados completos
       const convencoesPendentes = hasConvencoes
-        ? convencoesResult.data.filter(c => !c.piso_salarial || !c.vale_refeicao || !c.data_base).length
+        ? convencoesResult.data.filter(c => !c.vale_refeicao || !c.data_base).length
         : 0;
       
       // Determinar a última atualização
@@ -91,7 +111,7 @@ const Dashboard = () => {
           value: convencoesVigentes,
           icon: <Clock className="h-4 w-4" />,
           trend: { 
-            value: convencoesVigentes > 0 ? 
+            value: convencoesVigentes > 0 && totalConvencoes > 0 ? 
               Math.round((convencoesVigentes / totalConvencoes) * 100) : 0, 
             isPositive: true 
           }
@@ -112,7 +132,7 @@ const Dashboard = () => {
         
       // Transformar dados de convenções para exibição
       if (hasConvencoes) {
-        const transformedConvencoes = convencoesResult.data.slice(0, 4).map(c => {
+        const transformedConvencoes: ConvencaoData[] = convencoesResult.data.slice(0, 4).map(c => {
           return {
             title: c.titulo || `Convenção #${c.id.substring(0, 8)}`,
             numero: c.id,
@@ -130,6 +150,20 @@ const Dashboard = () => {
 
       // Processar estatísticas regionais
       if (hasSindicatos) {
+        // Contar sindicatos por categoria
+        const trabalhadores = sindicatosResult.data.filter(s => 
+          s.categoria && s.categoria.toLowerCase() === 'trabalhadores'
+        ).length;
+        
+        const empregadores = sindicatosResult.data.filter(s => 
+          s.categoria && s.categoria.toLowerCase() === 'empregadores'
+        ).length;
+        
+        setSindicatosPorCategoria({
+          trabalhadores,
+          empregadores
+        });
+
         const regions = ["Sudeste", "Nordeste", "Sul", "Centro-Oeste", "Norte"];
         const regStats = regions.map(regiao => {
           const sindicatosCount = sindicatosResult.data.filter(s => {
@@ -308,7 +342,22 @@ const Dashboard = () => {
           </div>
         </div>
       ) : (
-        renderEmptyState()
+        <div className="bg-muted/30 rounded-xl border p-8 text-center">
+          <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+            <AlertCircle className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">Nenhum dado encontrado</h3>
+          <p className="text-muted-foreground mb-4">
+            A base de dados está vazia ou foi limpa recentemente.
+          </p>
+          <Button 
+            onClick={() => navigate("/processar-dados")}
+            className="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Importar Dados
+          </Button>
+        </div>
       )}
 
       {hasData ? (
@@ -380,18 +429,18 @@ const Dashboard = () => {
                         <User className="h-4 w-4 text-blue-500" />
                         <span className="text-sm">Trabalhadores</span>
                       </div>
-                      <span className="text-sm font-medium">{
-                        sindicatosResult?.data?.filter(s => s.categoria === 'trabalhadores').length || 0
-                      }</span>
+                      <span className="text-sm font-medium">
+                        {sindicatosPorCategoria.trabalhadores}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <Building className="h-4 w-4 text-violet-500" />
                         <span className="text-sm">Empregadores</span>
                       </div>
-                      <span className="text-sm font-medium">{
-                        sindicatosResult?.data?.filter(s => s.categoria === 'empregadores').length || 0
-                      }</span>
+                      <span className="text-sm font-medium">
+                        {sindicatosPorCategoria.empregadores}
+                      </span>
                     </div>
                   </div>
                 ) : (

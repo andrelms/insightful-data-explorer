@@ -14,6 +14,11 @@ interface StatCardProps {
 }
 
 export function StatCard({ title, value, icon, description, trend }: StatCardProps) {
+  // Formatação de valores especiais
+  const displayValue = value === "0" || value === 0 ? 
+    "0" : 
+    (value === "N/A" ? "0" : value);
+  
   return (
     <Card className="overflow-hidden border hover-scale hover-glow transition-all">
       <CardContent className="p-0">
@@ -27,8 +32,8 @@ export function StatCard({ title, value, icon, description, trend }: StatCardPro
           
           <div className="p-4 flex flex-col">
             <div className="flex items-end gap-2">
-              <span className="text-2xl font-bold">{value}</span>
-              {trend && (
+              <span className="text-2xl font-bold">{displayValue}</span>
+              {trend && trend.value > 0 && (
                 <span
                   className={`text-xs font-medium px-1.5 py-0.5 rounded-full flex items-center ${
                     trend.isPositive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
