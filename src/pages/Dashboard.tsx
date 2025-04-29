@@ -1,4 +1,3 @@
-
 import { SearchBar } from "@/components/dashboard/SearchBar";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ConvencaoCard } from "@/components/dashboard/ConvencaoCard";
@@ -46,112 +45,130 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      const [convencoesResult, sindicatosResult, feedsResult] = await Promise.all([
-        supabase.from('convencoes').select('*').order('created_at', { ascending: false }).limit(4),
+      // Buscar dados das tabelas principais
+      const [convencoesResult, sindicatosResult, feedsResult, uploadsResult] = await Promise.all([
+        supabase.from('convencoes').select('*').order('created_at', { ascending: false }),
         supabase.from('sindicatos').select('*'),
-        supabase.from('feed_noticias').select('*').order('data_publicacao', { ascending: false }).limit(5)
+        supabase.from('feed_noticias').select('*').order('data_publicacao', { ascending: false }).limit(5),
+        supabase.from('uploaded_files').select('*')
       ]);
 
-      // Check if we have any data
+      // Verificar se há dados
       const hasConvencoes = convencoesResult.data && convencoesResult.data.length > 0;
       const hasSindicatos = sindicatosResult.data && sindicatosResult.data.length > 0;
       
       setHasData(hasConvencoes || hasSindicatos);
       
+      // Calcular estatísticas
       let totalConvencoes = convencoesResult.data?.length || 0;
+      const now = new Date();
+      const convencoesVigentes = hasConvencoes 
+        ? convencoesResult.data.filter(c => new Date(c.vigencia_fim) >= now).length
+        : 0;
+      
+      // Convenções pendentes são aquelas recentemente importadas sem dados completos
+      const convencoesPendentes = hasConvencoes
+        ? convencoesResult.data.filter(c => !c.piso_salarial || !c.vale_refeicao || !c.data_base).length
+        : 0;
+      
+      // Determinar a última atualização
       const lastUpdated = convencoesResult.data?.[0]?.updated_at 
         ? new Date(convencoesResult.data[0].updated_at).toLocaleDateString('pt-BR')
-        : "N/A";
-        
-      if (hasConvencoes) {
-        const now = new Date();
-        const vigentes = convencoesResult.data.filter(c => 
-          new Date(c.vigencia_fim) >= now
-        ).length;
-        
-        setStats([
-          {
-            title: "Total de Convenções",
-            value: totalConvencoes,
-            icon: <FileText className="h-4 w-4" />,
-            description: "Convenções indexadas"
-          },
-          {
-            title: "Convenções Vigentes",
-            value: vigentes,
-            icon: <Clock className="h-4 w-4" />,
-            trend: { value: 4, isPositive: true }
-          },
-          {
-            title: "Convenções Pendentes",
-            value: 12,
-            icon: <AlertCircle className="h-4 w-4" />,
-            description: "Necessitam revisão"
-          },
-          {
-            title: "Última Atualização",
-            value: lastUpdated,
-            icon: <RefreshCw className="h-4 w-4" />,
-            description: "Base atualizada diariamente"
+        : uploadsResult.data?.[0]?.uploaded_at
+          ? new Date(uploadsResult.data[0].uploaded_at).toLocaleDateString('pt-BR')
+          : "0"; // Usar "0" em vez de "N/A"
+      
+      // Atualizar stats
+      setStats([
+        {
+          title: "Total de Convenções",
+          value: totalConvencoes,
+          icon: <FileText className="h-4 w-4" />,
+          description: "Convenções indexadas"
+        },
+        {
+          title: "Convenções Vigentes",
+          value: convencoesVigentes,
+          icon: <Clock className="h-4 w-4" />,
+          trend: { 
+            value: convencoesVigentes > 0 ? 
+              Math.round((convencoesVigentes / totalConvencoes) * 100) : 0, 
+            isPositive: true 
           }
-        ]);
+        },
+        {
+          title: "Convenções Pendentes",
+          value: convencoesPendentes,
+          icon: <AlertCircle className="h-4 w-4" />,
+          description: "Necessitam revisão"
+        },
+        {
+          title: "Última Atualização",
+          value: lastUpdated,
+          icon: <RefreshCw className="h-4 w-4" />,
+          description: "Base atualizada diariamente"
+        }
+      ]);
         
-        const transformedConvencoes = convencoesResult.data.map(c => ({
-          title: c.titulo,
-          numero: c.id,
-          ano: new Date(c.created_at).getFullYear(),
-          sindicatos: ["COMERCIÁRIOS", "EMPREGADORES"],
-          vigenciaInicio: c.vigencia_inicio,
-          vigenciaFim: c.vigencia_fim
-        }));
+      // Transformar dados de convenções para exibição
+      if (hasConvencoes) {
+        const transformedConvencoes = convencoesResult.data.slice(0, 4).map(c => {
+          return {
+            title: c.titulo || `Convenção #${c.id.substring(0, 8)}`,
+            numero: c.id,
+            ano: c.vigencia_inicio ? new Date(c.vigencia_inicio).getFullYear() : new Date().getFullYear(),
+            sindicatos: [c.sindicato_id ? "SINDICATO" : "EMPREGADORES", "TRABALHADORES"],
+            vigenciaInicio: c.vigencia_inicio,
+            vigenciaFim: c.vigencia_fim
+          };
+        });
         
         setConvencoes(transformedConvencoes);
       } else {
         setConvencoes([]);
-        setStats([
-          {
-            title: "Total de Convenções",
-            value: 0,
-            icon: <FileText className="h-4 w-4" />,
-            description: "Convenções indexadas"
-          },
-          {
-            title: "Convenções Vigentes",
-            value: 0,
-            icon: <Clock className="h-4 w-4" />,
-            trend: { value: 0, isPositive: true }
-          },
-          {
-            title: "Convenções Pendentes",
-            value: 0,
-            icon: <AlertCircle className="h-4 w-4" />,
-            description: "Necessitam revisão"
-          },
-          {
-            title: "Última Atualização",
-            value: "N/A",
-            icon: <RefreshCw className="h-4 w-4" />,
-            description: "Base atualizada diariamente"
-          }
-        ]);
       }
 
-      // Set regional statistics based on database data or empty array if no data
+      // Processar estatísticas regionais
       if (hasSindicatos) {
         const regions = ["Sudeste", "Nordeste", "Sul", "Centro-Oeste", "Norte"];
         const regStats = regions.map(regiao => {
-          const sindicatosCount = sindicatosResult.data.filter(s => 
-            (s.estado === "SP" || s.estado === "MG" || s.estado === "RJ" || s.estado === "ES") && regiao === "Sudeste" ||
-            (s.estado === "BA" || s.estado === "PE" || s.estado === "CE" || s.estado === "MA" || s.estado === "PB" || s.estado === "RN" || s.estado === "AL" || s.estado === "SE" || s.estado === "PI") && regiao === "Nordeste" ||
-            (s.estado === "RS" || s.estado === "PR" || s.estado === "SC") && regiao === "Sul" ||
-            (s.estado === "MT" || s.estado === "MS" || s.estado === "GO" || s.estado === "DF") && regiao === "Centro-Oeste" ||
-            (s.estado === "AM" || s.estado === "PA" || s.estado === "TO" || s.estado === "RO" || s.estado === "AC" || s.estado === "AP" || s.estado === "RR") && regiao === "Norte"
-          ).length;
+          const sindicatosCount = sindicatosResult.data.filter(s => {
+            const estado = s.estado ? s.estado.toUpperCase() : '';
+            if (regiao === "Sudeste") {
+              return ["SP", "MG", "RJ", "ES"].includes(estado);
+            } else if (regiao === "Nordeste") {
+              return ["BA", "PE", "CE", "MA", "PB", "RN", "AL", "SE", "PI"].includes(estado);
+            } else if (regiao === "Sul") {
+              return ["RS", "PR", "SC"].includes(estado);
+            } else if (regiao === "Centro-Oeste") {
+              return ["MT", "MS", "GO", "DF"].includes(estado);
+            } else if (regiao === "Norte") {
+              return ["AM", "PA", "TO", "RO", "AC", "AP", "RR"].includes(estado);
+            }
+            return false;
+          }).length;
+          
+          // Encontrar convenções relacionadas à região
+          const convencoesCount = convencoesResult.data ? convencoesResult.data.filter(c => {
+            const estado = c.estado ? c.estado.toUpperCase() : '';
+            if (regiao === "Sudeste") {
+              return ["SP", "MG", "RJ", "ES"].includes(estado);
+            } else if (regiao === "Nordeste") {
+              return ["BA", "PE", "CE", "MA", "PB", "RN", "AL", "SE", "PI"].includes(estado);
+            } else if (regiao === "Sul") {
+              return ["RS", "PR", "SC"].includes(estado);
+            } else if (regiao === "Centro-Oeste") {
+              return ["MT", "MS", "GO", "DF"].includes(estado);
+            } else if (regiao === "Norte") {
+              return ["AM", "PA", "TO", "RO", "AC", "AP", "RR"].includes(estado);
+            }
+            return false;
+          }).length : 0;
           
           return {
             regiao,
             sindicatosCount,
-            convencoesCount: Math.floor(sindicatosCount * 1.5) // Simulate convention count based on sindicatos
+            convencoesCount
           };
         });
         
@@ -243,7 +260,11 @@ const Dashboard = () => {
         </Button>
       </div>
 
-      {hasData ? (
+      {isLoading ? (
+        <div className="flex justify-center items-center h-32">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : hasData ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <div className="flex items-center justify-between mb-4">
@@ -257,7 +278,15 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center justify-between w-full">
                 <h2 className="text-xl font-semibold">Convenções</h2>
-                <span className="text-xs text-muted-foreground">Atualizado agora</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => navigate('/convencoes')}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                >
+                  Ver todas
+                  <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
               </div>
             </div>
             
@@ -351,14 +380,18 @@ const Dashboard = () => {
                         <User className="h-4 w-4 text-blue-500" />
                         <span className="text-sm">Trabalhadores</span>
                       </div>
-                      <span className="text-sm font-medium">0</span>
+                      <span className="text-sm font-medium">{
+                        sindicatosResult?.data?.filter(s => s.categoria === 'trabalhadores').length || 0
+                      }</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <Building className="h-4 w-4 text-violet-500" />
                         <span className="text-sm">Empregadores</span>
                       </div>
-                      <span className="text-sm font-medium">0</span>
+                      <span className="text-sm font-medium">{
+                        sindicatosResult?.data?.filter(s => s.categoria === 'empregadores').length || 0
+                      }</span>
                     </div>
                   </div>
                 ) : (
@@ -368,10 +401,6 @@ const Dashboard = () => {
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="md:col-span-2">
-            {/* Dashboard - Feeds section removed as requested */}
           </div>
         </div>
       ) : null}
