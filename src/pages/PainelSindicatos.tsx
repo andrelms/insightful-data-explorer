@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, MapPin, ChevronDown, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 // Dicionário de siglas dos estados
 const siglas_estados: {[key: string]: string} = {
@@ -18,40 +19,56 @@ const siglas_estados: {[key: string]: string} = {
   'SE': 'Sergipe', 'TO': 'Tocantins'
 };
 
-// Mock data para sindicatos por estado
-const mockSindicatosPorEstado = [
+// Dados reais estruturados a partir das informações de sindicatos
+interface SindicatoInfo {
+  nome: string;
+  cnpj: string;
+  infoPrincipais: {
+    cargo: string;
+    cbo?: string;
+    cargaHoraria: string;
+    pisoSalarial: string;
+  }[];
+  outrasInfos: {
+    nome: string;
+    valor: string;
+  }[];
+  valoresHoraExtra?: {
+    dia: string;
+    percentual: string;
+    valor: string;
+  }[];
+}
+
+interface EstadoSindicatos {
+  sigla: string;
+  sindicatos: SindicatoInfo[];
+}
+
+// Dados a partir das informações em custom instructions
+const sindicatosPorEstado: EstadoSindicatos[] = [
   {
-    sigla: 'MG',
+    sigla: 'AL',
     sindicatos: [
       {
-        nome: 'SINDICATO DOS EMPREGADOS NO COMÉRCIO',
-        cnpj: '23.112.429/0001-89',
+        nome: 'SINDPD AL',
+        cnpj: '69.982.155/0001-77',
         infoPrincipais: [
-          { cargo: 'Auxiliar Administrativo', cbo: '4110-05', cargaHoraria: '44h', pisoSalarial: 'R$ 1.800,00' },
-          { cargo: 'Vendedor', cbo: '5211-10', cargaHoraria: '44h', pisoSalarial: 'R$ 1.950,00' }
+          { cargo: 'ANALISTA DE INFORMATICA NIVEL I', cargaHoraria: '44h', pisoSalarial: 'R$ 8696,50' },
+          { cargo: 'ANALISTA DE INFORMATICA NIVEL II', cargaHoraria: '44h', pisoSalarial: 'R$ 6630,50' },
+          { cargo: 'TECNICO EM APLICATIVO E DESENVOLVIMENTO DE SISTEMAS I', cargaHoraria: '44h', pisoSalarial: 'R$ 5484,00' },
+          { cargo: 'TECNICO EM APLICATIVO E DESENVOLVIMENTO DE SISTEMAS II', cargaHoraria: '44h', pisoSalarial: 'R$ 4295,50' },
+          { cargo: 'TECNICO EM INFORMATICA - 8 HORAS', cargaHoraria: '44h', pisoSalarial: 'R$ 4214,25' },
+          { cargo: 'TECNICO EM INFORMATICA - 6 HORAS', cargaHoraria: '36h', pisoSalarial: 'R$ 3167,00' },
+          { cargo: 'ASSISTENTE DE INFORMATICA', cargaHoraria: '36h', pisoSalarial: 'R$ 2036,00' },
+          { cargo: 'PISO NORMATIVO/ JORNADA DE 8 HORAS DIÁRIAS', cargaHoraria: '44h', pisoSalarial: 'R$ 2314,00' },
+          { cargo: 'PISO NORMATIVO/ JORNADA DE 6 HORAS DIÁRIAS', cargaHoraria: '36h', pisoSalarial: 'R$ 1736,00' }
         ],
         outrasInfos: [
-          { nome: 'DATA BASE', valor: '01/03/2024' },
-          { nome: 'VIGÊNCIA', valor: '2023-2024' }
-        ],
-        valoresHoraExtra: [
-          { dia: 'Normal', percentual: '50%', valor: 'R$ 12,27' },
-          { dia: 'Domingo/Feriado', percentual: '100%', valor: 'R$ 18,40' }
-        ]
-      },
-      {
-        nome: 'SINDICATO DOS METALÚRGICOS',
-        cnpj: '21.978.422/0001-62',
-        infoPrincipais: [
-          { cargo: 'Soldador', cbo: '7243-15', cargaHoraria: '44h', pisoSalarial: 'R$ 2.400,00' }
-        ],
-        outrasInfos: [
-          { nome: 'DATA BASE', valor: '01/05/2024' },
-          { nome: 'VIGÊNCIA', valor: '2023-2025' }
-        ],
-        valoresHoraExtra: [
-          { dia: 'Normal', percentual: '55%', valor: 'R$ 15,30' },
-          { dia: 'Domingo/Feriado', percentual: '110%', valor: 'R$ 21,50' }
+          { nome: 'DATA BASE', valor: '01 JULHO' },
+          { nome: 'SITE', valor: 'www.sindpdal.org.br' },
+          { nome: 'VALE REFEIÇÃO', valor: 'VA/VR R$26,75 (FIXO 22 DIAS)' },
+          { nome: 'PARTICULARIDADE', valor: 'HORAS EXTRAS 60% (SEG-SAB), 100% (DOM/FER)' }
         ]
       }
     ]
@@ -60,17 +77,23 @@ const mockSindicatosPorEstado = [
     sigla: 'SP',
     sindicatos: [
       {
-        nome: 'SINDICATO DOS BANCÁRIOS',
-        cnpj: '61.651.675/0001-95',
+        nome: 'SINDPD SP',
+        cnpj: '00.000.000/0001-00',
         infoPrincipais: [
-          { cargo: 'Caixa', cbo: '4132-10', cargaHoraria: '30h', pisoSalarial: 'R$ 3.200,00' }
+          { cargo: 'DIGITADOR', cargaHoraria: '30H SEMANAIS', pisoSalarial: 'R$ 2025,00' },
+          { cargo: 'ATIVIDADES ADMINISTRATIVAS', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 1615,00' },
+          { cargo: 'ATIVIDADE TÉCNICA INFORMATICA', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 2245,00' },
+          { cargo: 'TÉCNICO DE SUPORTE', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 2245,00' }
         ],
         outrasInfos: [
-          { nome: 'DATA BASE', valor: '01/09/2024' },
-          { nome: 'VIGÊNCIA', valor: '2022-2024' }
+          { nome: 'DATA BASE', valor: '01 JANEIRO 2024' },
+          { nome: 'SITE', valor: 'www.sindpd.org.br' },
+          { nome: 'VALE REFEIÇÃO', valor: 'VR R$ 28,00 PARA 08 HORAS (FIXO 22 DIAS MÊS) = R$ 616,00' }
         ],
         valoresHoraExtra: [
-          { dia: 'Normal', percentual: '60%', valor: 'R$ 25,60' }
+          { dia: 'DIAS ÚTEIS (PRIMEIRAS 2 HORAS)', percentual: '75%', valor: 'R$ 23,63' },
+          { dia: 'DIAS ÚTEIS (APÓS 2 HORAS)', percentual: '100%', valor: 'R$ 27,00' },
+          { dia: 'FINAL DE SEMANA E FERIADO', percentual: '100%', valor: 'R$ 27,00' }
         ]
       }
     ]
@@ -79,15 +102,21 @@ const mockSindicatosPorEstado = [
     sigla: 'RJ',
     sindicatos: [
       {
-        nome: 'SINDICATO DOS PROFESSORES',
-        cnpj: '33.654.328/0001-41',
+        nome: 'SINDPD RJ',
+        cnpj: '00.000.000/0001-00',
         infoPrincipais: [
-          { cargo: 'Professor Ensino Médio', cbo: '2321-05', cargaHoraria: '20h', pisoSalarial: 'R$ 2.800,00' },
-          { cargo: 'Professor Ensino Superior', cbo: '2341-15', cargaHoraria: '20h', pisoSalarial: 'R$ 4.200,00' }
+          { cargo: 'ASSISTENTE/AUXILIAR ADMINISTRATIVO', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 1540,00' },
+          { cargo: 'SECRETÁRIA', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 1540,00' },
+          { cargo: 'DIGITADOR, DIGITADOR DE TERMINAL', cargaHoraria: '30H SEMANAIS', pisoSalarial: 'R$ 1699,38' }
         ],
         outrasInfos: [
-          { nome: 'DATA BASE', valor: '01/04/2024' },
-          { nome: 'VIGÊNCIA', valor: '2023-2024' }
+          { nome: 'DATA BASE', valor: '01 SETEMBRO 2023' },
+          { nome: 'SITE', valor: 'http://sindpdrj.org.br/' },
+          { nome: 'VALE REFEIÇÃO', valor: 'VR R$ 35,00 P/8h (FIXO 21 DIAS) = 735,00' }
+        ],
+        valoresHoraExtra: [
+          { dia: 'DIAS NORMAIS', percentual: '50%', valor: 'R$ 11,55' },
+          { dia: 'FINAL DE SEMANA E FERIADO', percentual: '100%', valor: 'R$ 15,40' }
         ]
       }
     ]
@@ -97,11 +126,20 @@ const mockSindicatosPorEstado = [
 const PainelSindicatos = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("all");
-  const [categoriaFilter, setCategoriaSFilter] = useState("all");
+  const [categoriaFilter, setCategoriaFilter] = useState("all");
   const [expandedSindicatos, setExpandedSindicatos] = useState<Record<string, boolean>>({});
+  const [dados, setDados] = useState<EstadoSindicatos[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Para o propósito deste exemplo, vamos usar os dados estruturados
+    // Em uma implementação real, buscaríamos do Supabase
+    setDados(sindicatosPorEstado);
+    setLoading(false);
+  }, []);
 
   // Filter and search logic
-  const filteredEstados = mockSindicatosPorEstado.filter(estado => {
+  const filteredEstados = dados.filter(estado => {
     // Estado filter logic
     if (estadoFilter !== "all" && estado.sigla !== estadoFilter) return false;
     
@@ -166,7 +204,7 @@ const PainelSindicatos = () => {
             </SelectContent>
           </Select>
           
-          <Select value={categoriaFilter} onValueChange={setCategoriaSFilter}>
+          <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filtrar por categoria" />
             </SelectTrigger>
@@ -180,137 +218,143 @@ const PainelSindicatos = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredEstados.map((estado) => (
-          <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
-            <Card className="overflow-hidden hover-scale">
-              <div className="bg-gradient-to-r from-blue-600 to-violet-600 text-white p-4">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  <h2 className="text-xl font-bold">{siglas_estados[estado.sigla]}</h2>
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredEstados.map((estado) => (
+            <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
+              <Card className="overflow-hidden hover-scale">
+                <div className="bg-gradient-to-r from-blue-600 to-violet-600 text-white p-4">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    <h2 className="text-xl font-bold">{siglas_estados[estado.sigla]}</h2>
+                  </div>
+                  <div className="text-sm opacity-80 mt-1">
+                    {estado.sindicatos.length} Sindicato{estado.sindicatos.length !== 1 ? 's' : ''}
+                  </div>
                 </div>
-                <div className="text-sm opacity-80 mt-1">
-                  {estado.sindicatos.length} Sindicato{estado.sindicatos.length !== 1 ? 's' : ''}
-                </div>
-              </div>
-              
-              <CardContent className="p-0">
-                {estado.sindicatos.map((sindicato, sindIdx) => {
-                  const isExpanded = expandedSindicatos[`${estado.sigla}-${sindIdx}`];
-                  
-                  return (
-                    <div key={sindIdx} className="border-t first:border-t-0">
-                      <div 
-                        className="p-4 cursor-pointer hover:bg-muted/50 flex justify-between items-center"
-                        onClick={() => toggleSindicato(estado.sigla, sindIdx)}
-                      >
-                        <div className="font-medium text-primary">{sindicato.nome}</div>
-                        <ChevronDown className={cn(
-                          "h-5 w-5 text-muted-foreground transition-transform",
-                          isExpanded && "transform rotate-180"
-                        )} />
-                      </div>
-                      
-                      {isExpanded && (
-                        <div className="p-4 pt-0 space-y-4 text-sm">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                            <Info className="h-3 w-3" />
-                            <span>CNPJ: {sindicato.cnpj}</span>
-                          </div>
-                          
-                          {sindicato.infoPrincipais && sindicato.infoPrincipais.length > 0 && (
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-xs text-accent-foreground">Informações Principais</h4>
-                              <div className="overflow-x-auto">
-                                <table className="w-full min-w-[400px] border-collapse text-left">
-                                  <thead>
-                                    <tr>
-                                      {Object.keys(sindicato.infoPrincipais[0]).map(key => (
-                                        <th key={key} className="p-2 border bg-muted text-xs uppercase">{key}</th>
-                                      ))}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {sindicato.infoPrincipais.map((info, i) => (
-                                      <tr key={i} className="even:bg-muted/30">
-                                        {Object.values(info).map((value, j) => (
-                                          <td key={j} className="p-2 border">{String(value)}</td>
-                                        ))}
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {sindicato.outrasInfos && sindicato.outrasInfos.length > 0 && (
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-xs text-accent-foreground">Outras Informações</h4>
-                              <div className="grid grid-cols-2 gap-2">
-                                {sindicato.outrasInfos.map((info, i) => (
-                                  <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-primary">
-                                    <div className="text-xs font-medium">{info.nome}</div>
-                                    <div>{info.valor}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {sindicato.valoresHoraExtra && sindicato.valoresHoraExtra.length > 0 && (
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-xs text-accent-foreground">Valores Hora Extra</h4>
-                              <div className="overflow-x-auto">
-                                <table className="w-full border-collapse text-left">
-                                  <thead>
-                                    <tr>
-                                      {Object.keys(sindicato.valoresHoraExtra[0]).map(key => (
-                                        <th key={key} className="p-2 border bg-muted text-xs uppercase">{key}</th>
-                                      ))}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {sindicato.valoresHoraExtra.map((valor, i) => (
-                                      <tr key={i} className="even:bg-muted/30">
-                                        {Object.values(valor).map((v, j) => (
-                                          <td key={j} className="p-2 border">{String(v)}</td>
-                                        ))}
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="pt-2 mt-4 border-t text-center">
-                            <Button variant="link" size="sm" className="text-xs text-muted-foreground">
-                              Ver detalhes da convenção
-                            </Button>
-                          </div>
+                
+                <CardContent className="p-0">
+                  {estado.sindicatos.map((sindicato, sindIdx) => {
+                    const isExpanded = expandedSindicatos[`${estado.sigla}-${sindIdx}`];
+                    
+                    return (
+                      <div key={sindIdx} className="border-t first:border-t-0">
+                        <div 
+                          className="p-4 cursor-pointer hover:bg-muted/50 flex justify-between items-center"
+                          onClick={() => toggleSindicato(estado.sigla, sindIdx)}
+                        >
+                          <div className="font-medium text-primary">{sindicato.nome}</div>
+                          <ChevronDown className={cn(
+                            "h-5 w-5 text-muted-foreground transition-transform",
+                            isExpanded && "transform rotate-180"
+                          )} />
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </div>
-        ))}
-        
-        {filteredEstados.length === 0 && (
-          <div className="col-span-full flex flex-col items-center justify-center p-8 text-center">
-            <div className="rounded-full bg-muted/40 p-4 mb-4">
-              <Search className="h-8 w-8 text-muted-foreground" />
+                        
+                        {isExpanded && (
+                          <div className="p-4 pt-0 space-y-4 text-sm">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                              <Info className="h-3 w-3" />
+                              <span>CNPJ: {sindicato.cnpj}</span>
+                            </div>
+                            
+                            {sindicato.infoPrincipais && sindicato.infoPrincipais.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Informações Principais</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full min-w-[400px] border-collapse text-left">
+                                    <thead>
+                                      <tr>
+                                        {Object.keys(sindicato.infoPrincipais[0]).filter(k => k !== 'cbo' || sindicato.infoPrincipais[0].cbo).map(key => (
+                                          <th key={key} className="p-2 border bg-muted text-xs uppercase">{key}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {sindicato.infoPrincipais.map((info, i) => (
+                                        <tr key={i} className="even:bg-muted/30">
+                                          {Object.entries(info).filter(([k]) => k !== 'cbo' || info.cbo).map(([key, value], j) => (
+                                            <td key={j} className="p-2 border">{String(value)}</td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {sindicato.outrasInfos && sindicato.outrasInfos.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Outras Informações</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {sindicato.outrasInfos.map((info, i) => (
+                                    <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                      <div className="text-xs font-medium">{info.nome}</div>
+                                      <div>{info.valor}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {sindicato.valoresHoraExtra && sindicato.valoresHoraExtra.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Valores Hora Extra</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full border-collapse text-left">
+                                    <thead>
+                                      <tr>
+                                        {Object.keys(sindicato.valoresHoraExtra[0]).map(key => (
+                                          <th key={key} className="p-2 border bg-muted text-xs uppercase">{key}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {sindicato.valoresHoraExtra.map((valor, i) => (
+                                        <tr key={i} className="even:bg-muted/30">
+                                          {Object.values(valor).map((v, j) => (
+                                            <td key={j} className="p-2 border">{String(v)}</td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="pt-2 mt-4 border-t text-center">
+                              <Button variant="link" size="sm" className="text-xs text-muted-foreground">
+                                Ver detalhes da convenção
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
             </div>
-            <h3 className="text-xl font-medium mb-1">Nenhum resultado encontrado</h3>
-            <p className="text-muted-foreground max-w-md">
-              Não encontramos resultados para sua busca. Tente outros termos ou remova os filtros.
-            </p>
-          </div>
-        )}
-      </div>
+          ))}
+          
+          {filteredEstados.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center p-8 text-center">
+              <div className="rounded-full bg-muted/40 p-4 mb-4">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-medium mb-1">Nenhum resultado encontrado</h3>
+              <p className="text-muted-foreground max-w-md">
+                Não encontramos resultados para sua busca. Tente outros termos ou remova os filtros.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
