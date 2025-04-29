@@ -93,7 +93,7 @@ const Admin = () => {
             <div className="flex items-center gap-1">
               <Bell className="h-4 w-4" />
               <Badge variant="outline" className="bg-white/20 hover:bg-white/30 text-white border-transparent">
-                {notificationCount.toString()}
+                {notificationCount}
               </Badge>
             </div>
           </div>
