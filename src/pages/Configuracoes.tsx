@@ -2,7 +2,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ConfigSection } from "@/components/admin/ConfigSection";
 import { AlertTriangle } from "lucide-react";
 
 const Configuracoes = () => {
@@ -43,8 +42,6 @@ const Configuracoes = () => {
                 </Button>
               </div>
             </div>
-            
-            <ConfigSection />
           </CardContent>
         </Card>
       </div>
