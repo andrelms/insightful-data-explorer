@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Database, Settings, FileText } from "lucide-react";
@@ -122,38 +123,64 @@ const Admin = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatusCard 
-          title="Convenções"
-          icon={<Scale className="h-6 w-6 text-primary" />}
-          value={activeConventions.toString()}
-          subtitle="Ativas"
-          trend={convTrend}
-          action={<Button size="sm" variant="outline">Ver todas</Button>}
-        />
+        <div className="card p-6 border rounded-lg shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Scale className="h-6 w-6 text-primary" />
+              <h3 className="font-medium">Convenções</h3>
+            </div>
+            <Button size="sm" variant="outline">Ver todas</Button>
+          </div>
+          <p className="text-3xl font-bold">{activeConventions}</p>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-sm text-muted-foreground">Ativas</span>
+            <div className="flex items-center text-xs">
+              <span className={`${convTrend.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                {convTrend.value * 100}%
+              </span>
+            </div>
+          </div>
+        </div>
 
-        <StatusCard 
-          title="Processamentos"
-          icon={<RefreshCw className="h-6 w-6 text-orange-500" />}
-          value={recentImports.toString()}
-          subtitle="Últimos 30 dias"
-          trend={{value: 0.05, trend: 'up'}}
-          action={<Button size="sm" variant="outline">Histórico</Button>}
-        />
+        <div className="card p-6 border rounded-lg shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-6 w-6 text-orange-500" />
+              <h3 className="font-medium">Processamentos</h3>
+            </div>
+            <Button size="sm" variant="outline">Histórico</Button>
+          </div>
+          <p className="text-3xl font-bold">{recentImports}</p>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-sm text-muted-foreground">Últimos 30 dias</span>
+            <div className="flex items-center text-xs">
+              <span className="text-green-500">5%</span>
+            </div>
+          </div>
+        </div>
         
-        <StatusCard 
-          title="Notificações"
-          icon={<Bell className="h-6 w-6 text-blue-500" />}
-          value={notificationCount.toString()}
-          subtitle="Não lidas"
-          trend={{value: 0.15, trend: 'down'}}
-          action={<Button size="sm" variant="outline">Ver todas</Button>}
-        />
+        <div className="card p-6 border rounded-lg shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Bell className="h-6 w-6 text-blue-500" />
+              <h3 className="font-medium">Notificações</h3>
+            </div>
+            <Button size="sm" variant="outline">Ver todas</Button>
+          </div>
+          <p className="text-3xl font-bold">{notificationCount.toString()}</p>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-sm text-muted-foreground">Não lidas</span>
+            <div className="flex items-center text-xs">
+              <span className="text-red-500">15%</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <StatusCard 
         isConnected={isConnected}
         lastSync={lastSync}
-        notificationCount={notificationCount.toString()} // Convert to string here
+        notificationCount={notificationCount.toString()} 
         notifications={notifications}
         onMarkAllAsRead={markAllAsRead}
       />
