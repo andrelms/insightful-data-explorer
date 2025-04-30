@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Database, Settings, FileText } from "lucide-react";
@@ -9,12 +8,17 @@ import { LogsSection } from "@/components/admin/LogsSection";
 import { StatusCard } from "@/components/admin/StatusCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { Scale, RefreshCw, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Admin = () => {
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(true);
+  const [activeConventions, setActiveConventions] = useState(0);
+  const [recentImports, setRecentImports] = useState(0);
+  const [convTrend, setConvTrend] = useState({value: 0.05, trend: 'up'});
 
   // Buscar dados de status do sistema ao carregar
   useEffect(() => {
@@ -109,12 +113,41 @@ const Admin = () => {
   };
   
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Área Administrativa</h1>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight">Painel de Administração</h1>
         <p className="text-muted-foreground">
-          Gerencie a importação de dados, configure o banco de dados e monitore o sistema.
+          Gerencie dados, defina configurações e monitore o sistema.
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatusCard 
+          title="Convenções"
+          icon={<Scale className="h-6 w-6 text-primary" />}
+          value={activeConventions.toString()}
+          subtitle="Ativas"
+          trend={convTrend}
+          action={<Button size="sm" variant="outline">Ver todas</Button>}
+        />
+
+        <StatusCard 
+          title="Processamentos"
+          icon={<RefreshCw className="h-6 w-6 text-orange-500" />}
+          value={recentImports.toString()}
+          subtitle="Últimos 30 dias"
+          trend={{value: 0.05, trend: 'up'}}
+          action={<Button size="sm" variant="outline">Histórico</Button>}
+        />
+        
+        <StatusCard 
+          title="Notificações"
+          icon={<Bell className="h-6 w-6 text-blue-500" />}
+          value={notificationCount.toString()}
+          subtitle="Não lidas"
+          trend={{value: 0.15, trend: 'down'}}
+          action={<Button size="sm" variant="outline">Ver todas</Button>}
+        />
       </div>
 
       <StatusCard 
