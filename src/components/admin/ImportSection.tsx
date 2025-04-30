@@ -18,7 +18,7 @@ export function ImportSection() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
 
-  // Define the fetchUploadedFiles function before using it
+  // Define the fetchUploadedFiles function before using it in useEffect
   const fetchUploadedFiles = async () => {
     setIsLoading(true);
     try {
