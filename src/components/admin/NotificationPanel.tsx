@@ -15,7 +15,7 @@ interface Notification {
 }
 
 interface NotificationPanelProps {
-  notificationCount: string; // Changed from number to string to fix type issue
+  notificationCount: string; // Explicitly defined as string
   notifications: Notification[];
   onMarkAllAsRead: () => void;
 }

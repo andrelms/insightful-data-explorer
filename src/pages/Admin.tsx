@@ -120,7 +120,7 @@ const Admin = () => {
       <StatusCard 
         isConnected={isConnected}
         lastSync={lastSync}
-        notificationCount={notificationCount.toString()} // Convert number to string here
+        notificationCount={notificationCount.toString()} // Converting number to string here
         notifications={notifications}
         onMarkAllAsRead={markAllAsRead}
       />
