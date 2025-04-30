@@ -11,10 +11,13 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "@/components/ui/use-toast";
 
 const Admin = () => {
   const navigate = useNavigate();
   const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(true);
 
@@ -52,6 +55,9 @@ const Admin = () => {
             
           if (lastUpload) {
             setLastSync(new Date(lastUpload.uploaded_at).toLocaleDateString());
+          } else {
+            // Se não encontrar nenhum, usar "0" ao invés de null
+            setLastSync("0");
           }
         }
         
@@ -65,6 +71,23 @@ const Admin = () => {
         if (!logsError && errorLogs) {
           setNotificationCount(parseInt(errorLogs.count) || 0);
         }
+        
+        // Buscar últimas notificações
+        const { data: recentLogs, error: recentLogsError } = await supabase
+          .from('system_logs')
+          .select('id, timestamp, level, message, module')
+          .order('timestamp', { ascending: false })
+          .limit(5);
+          
+        if (!recentLogsError && recentLogs) {
+          setNotifications(recentLogs.map(log => ({
+            id: log.id,
+            title: `${log.level}: ${log.module || 'Sistema'}`,
+            message: log.message,
+            date: new Date(log.timestamp).toLocaleString(),
+            read: false
+          })));
+        }
       } catch (error) {
         console.error("Erro ao buscar status do sistema:", error);
         setIsConnected(false);
@@ -73,6 +96,22 @@ const Admin = () => {
     
     fetchSystemStatus();
   }, []);
+
+  const markAllAsRead = async () => {
+    try {
+      // Atualizar sistema de logs como lidos (aqui seria o código real)
+      // Por enquanto apenas atualizamos a interface
+      setNotificationCount(0);
+      setNotifications(prev => prev.map(n => ({...n, read: true})));
+      
+      toast({
+        title: "Notificações marcadas como lidas",
+        description: "Todas as notificações foram marcadas como lidas.",
+      });
+    } catch (error) {
+      console.error("Erro ao marcar notificações como lidas:", error);
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -90,12 +129,47 @@ const Admin = () => {
               <AlertCircle className="h-5 w-5" />
               Status do Sistema
             </CardTitle>
-            <div className="flex items-center gap-1">
-              <Bell className="h-4 w-4" />
-              <Badge variant="outline" className="bg-white/20 hover:bg-white/30 text-white border-transparent">
-                {notificationCount}
-              </Badge>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/20 hover:text-white">
+                  <Bell className="h-5 w-5" />
+                  {notificationCount > 0 && (
+                    <Badge variant="outline" className="absolute -top-1 -right-1 bg-white/20 hover:bg-white/30 text-white border-transparent">
+                      {notificationCount.toString()}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0">
+                <div className="p-4 border-b">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-medium">Notificações do Sistema</h3>
+                    {notificationCount > 0 && (
+                      <Button variant="ghost" size="sm" onClick={markAllAsRead}>
+                        Marcar como lidas
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="max-h-[300px] overflow-auto">
+                  {notifications.length > 0 ? (
+                    notifications.map((notification, i) => (
+                      <div key={notification.id || i} className={`p-4 border-b last:border-0 ${notification.read ? 'bg-background' : 'bg-muted/30'}`}>
+                        <div className="flex justify-between items-start">
+                          <h4 className="text-sm font-medium">{notification.title}</h4>
+                          <span className="text-xs text-muted-foreground">{notification.date}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Nenhuma notificação disponível
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           <CardDescription className="text-blue-100">
             Monitore o estado atual do sistema e acesse funções administrativas.

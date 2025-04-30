@@ -14,10 +14,10 @@ interface StatCardProps {
 }
 
 export function StatCard({ title, value, icon, description, trend }: StatCardProps) {
-  // Formatação de valores especiais
-  const displayValue = value === "0" || value === 0 ? 
+  // Formatação de valores especiais - atualizando para sempre mostrar "0" em vez de "N/A"
+  const displayValue = value === "0" || value === 0 || value === "N/A" || value === null || value === undefined ? 
     "0" : 
-    (value === "N/A" ? "0" : value);
+    value;
   
   return (
     <Card className="overflow-hidden border hover-scale hover-glow transition-all">
