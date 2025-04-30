@@ -1,21 +1,16 @@
 
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Database, Settings, FileText, AlertCircle, Bell } from "lucide-react";
+import { Upload, Database, Settings, FileText } from "lucide-react";
 import { DatabaseManagement } from "@/components/admin/DatabaseManagement";
 import { ImportSection } from "@/components/admin/ImportSection";
 import { ConfigSection } from "@/components/admin/ConfigSection";
 import { LogsSection } from "@/components/admin/LogsSection";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
+import { StatusCard } from "@/components/admin/StatusCard";
 import { supabase } from "@/integrations/supabase/client";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "@/components/ui/use-toast";
 
 const Admin = () => {
-  const navigate = useNavigate();
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(null);
@@ -122,126 +117,61 @@ const Admin = () => {
         </p>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader className="bg-gradient-to-r from-blue-600/90 to-violet-600/90 text-white">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
-              Status do Sistema
-            </CardTitle>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/20 hover:text-white">
-                  <Bell className="h-5 w-5" />
-                  {notificationCount > 0 && (
-                    <Badge variant="outline" className="absolute -top-1 -right-1 bg-white/20 hover:bg-white/30 text-white border-transparent">
-                      {notificationCount.toString()}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-0">
-                <div className="p-4 border-b">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium">Notificações do Sistema</h3>
-                    {notificationCount > 0 && (
-                      <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-                        Marcar como lidas
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="max-h-[300px] overflow-auto">
-                  {notifications.length > 0 ? (
-                    notifications.map((notification, i) => (
-                      <div key={notification.id || i} className={`p-4 border-b last:border-0 ${notification.read ? 'bg-background' : 'bg-muted/30'}`}>
-                        <div className="flex justify-between items-start">
-                          <h4 className="text-sm font-medium">{notification.title}</h4>
-                          <span className="text-xs text-muted-foreground">{notification.date}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      Nenhuma notificação disponível
-                    </div>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-          <CardDescription className="text-blue-100">
-            Monitore o estado atual do sistema e acesse funções administrativas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6 grid gap-6 md:grid-cols-2">
-          <div className="flex flex-col gap-2 p-4 border rounded-lg">
-            <h3 className="text-sm font-semibold">Recursos do Sistema</h3>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <Button variant="outline" size="sm" onClick={() => navigate("/")}>Dashboard</Button>
-              <Button variant="outline" size="sm" onClick={() => navigate("/processar-dados")}>Processar Dados</Button>
-              <Button variant="outline" size="sm" onClick={() => navigate("/painel-sindicatos")}>Painel Sindicatos</Button>
-              <Button variant="outline" size="sm" onClick={() => navigate("/convencoes")}>Convenções</Button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 p-4 border rounded-lg">
-            <h3 className="text-sm font-semibold">Banco de Dados</h3>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-sm text-muted-foreground">Conexão</span>
-              <div className="flex items-center gap-1">
-                <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">{isConnected ? 'Ativa' : 'Inativa'}</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Última sincronização</span>
-              <span className="text-sm">{lastSync || "0"}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <StatusCard 
+        isConnected={isConnected}
+        lastSync={lastSync}
+        notificationCount={notificationCount}
+        notifications={notifications}
+        onMarkAllAsRead={markAllAsRead}
+      />
 
-      <Tabs defaultValue="import" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="import">
-            <Upload className="h-4 w-4 mr-2" />
-            Importação
-          </TabsTrigger>
-          <TabsTrigger value="database">
-            <Database className="h-4 w-4 mr-2" />
-            Banco de Dados
-          </TabsTrigger>
-          <TabsTrigger value="config">
-            <Settings className="h-4 w-4 mr-2" />
-            Configurações
-          </TabsTrigger>
-          <TabsTrigger value="logs">
-            <FileText className="h-4 w-4 mr-2" />
-            Logs
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="import">
-          <ImportSection />
-        </TabsContent>
-        
-        <TabsContent value="database">
-          <div className="grid gap-6">
-            <DatabaseManagement />
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="config">
-          <ConfigSection />
-        </TabsContent>
-        
-        <TabsContent value="logs">
-          <LogsSection />
-        </TabsContent>
-      </Tabs>
+      <AdminTabs />
     </div>
   );
 };
+
+// Separate component for the tabs section
+function AdminTabs() {
+  return (
+    <Tabs defaultValue="import" className="w-full">
+      <TabsList className="grid w-full grid-cols-4">
+        <TabsTrigger value="import">
+          <Upload className="h-4 w-4 mr-2" />
+          Importação
+        </TabsTrigger>
+        <TabsTrigger value="database">
+          <Database className="h-4 w-4 mr-2" />
+          Banco de Dados
+        </TabsTrigger>
+        <TabsTrigger value="config">
+          <Settings className="h-4 w-4 mr-2" />
+          Configurações
+        </TabsTrigger>
+        <TabsTrigger value="logs">
+          <FileText className="h-4 w-4 mr-2" />
+          Logs
+        </TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="import">
+        <ImportSection />
+      </TabsContent>
+      
+      <TabsContent value="database">
+        <div className="grid gap-6">
+          <DatabaseManagement />
+        </div>
+      </TabsContent>
+      
+      <TabsContent value="config">
+        <ConfigSection />
+      </TabsContent>
+      
+      <TabsContent value="logs">
+        <LogsSection />
+      </TabsContent>
+    </Tabs>
+  );
+}
 
 export default Admin;
