@@ -17,7 +17,7 @@ interface Notification {
 interface StatusCardProps {
   isConnected: boolean;
   lastSync: string | null;
-  notificationCount: number;
+  notificationCount: string; // Changed from number to string to fix type issue
   notifications: Notification[];
   onMarkAllAsRead: () => void;
 }

@@ -15,7 +15,7 @@ interface Notification {
 }
 
 interface NotificationPanelProps {
-  notificationCount: number;
+  notificationCount: string; // Changed from number to string to fix type issue
   notifications: Notification[];
   onMarkAllAsRead: () => void;
 }
@@ -30,9 +30,9 @@ export function NotificationPanel({
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/20 hover:text-white">
           <Bell className="h-5 w-5" />
-          {notificationCount > 0 && (
+          {parseInt(notificationCount) > 0 && (
             <Badge variant="outline" className="absolute -top-1 -right-1 bg-white/20 hover:bg-white/30 text-white border-transparent">
-              {notificationCount.toString()}
+              {notificationCount}
             </Badge>
           )}
         </Button>
@@ -41,7 +41,7 @@ export function NotificationPanel({
         <div className="p-4 border-b">
           <div className="flex justify-between items-center">
             <h3 className="font-medium">Notificações do Sistema</h3>
-            {notificationCount > 0 && (
+            {parseInt(notificationCount) > 0 && (
               <Button variant="ghost" size="sm" onClick={onMarkAllAsRead}>
                 Marcar como lidas
               </Button>
