@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUpload } from "@/components/dashboard/FileUpload";
 import { Button } from "@/components/ui/button";
@@ -19,11 +18,7 @@ export function ImportSection() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
 
-  // Fetch uploaded files when component mounts
-  useState(() => {
-    fetchUploadedFiles();
-  });
-
+  // Define the fetchUploadedFiles function before using it
   const fetchUploadedFiles = async () => {
     setIsLoading(true);
     try {
@@ -45,6 +40,11 @@ export function ImportSection() {
       setIsLoading(false);
     }
   };
+
+  // Use useEffect to call fetchUploadedFiles when the component mounts
+  useEffect(() => {
+    fetchUploadedFiles();
+  }, []);
 
   const handleUploadSuccess = async (file: File) => {
     await fetchUploadedFiles();
