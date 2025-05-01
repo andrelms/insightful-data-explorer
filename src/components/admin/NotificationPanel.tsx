@@ -15,14 +15,14 @@ interface Notification {
 }
 
 interface NotificationPanelProps {
-  notificationCount: string; // Explicitly defined as string
+  notificationCount: string; 
   notifications: Notification[];
   onMarkAllAsRead: () => void;
 }
 
 export function NotificationPanel({ 
   notificationCount, 
-  notifications, 
+  notifications = [], // Provide default empty array to prevent undefined errors
   onMarkAllAsRead 
 }: NotificationPanelProps) {
   return (
@@ -49,7 +49,7 @@ export function NotificationPanel({
           </div>
         </div>
         <div className="max-h-[300px] overflow-auto">
-          {notifications.length > 0 ? (
+          {notifications && notifications.length > 0 ? (
             notifications.map((notification, i) => (
               <div key={notification.id || i} className={`p-4 border-b last:border-0 ${notification.read ? 'bg-background' : 'bg-muted/30'}`}>
                 <div className="flex justify-between items-start">

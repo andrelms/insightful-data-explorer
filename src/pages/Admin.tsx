@@ -181,6 +181,11 @@ const Admin = () => {
         icon={<Bell className="h-5 w-5" />}
         trend="up"
         trendValue="12%"
+        isConnected={isConnected}
+        lastSync={lastSync}
+        notificationCount={notificationCount.toString()}
+        notifications={notifications}
+        onMarkAllAsRead={markAllAsRead}
       />
 
       <AdminTabs />

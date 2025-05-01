@@ -15,19 +15,25 @@ interface Notification {
 }
 
 interface StatusCardProps {
-  isConnected: boolean;
-  lastSync: string | null;
-  notificationCount: string; // Explicitly defined as string
-  notifications: Notification[];
-  onMarkAllAsRead: () => void;
+  isConnected?: boolean;
+  lastSync?: string | null;
+  notificationCount?: string; 
+  notifications?: Notification[];
+  onMarkAllAsRead?: () => void;
+  icon?: React.ReactNode;
+  trend?: string;
+  trendValue?: string;
 }
 
 export function StatusCard({
   isConnected,
   lastSync,
   notificationCount,
-  notifications,
-  onMarkAllAsRead
+  notifications = [],
+  onMarkAllAsRead,
+  icon,
+  trend,
+  trendValue
 }: StatusCardProps) {
   const navigate = useNavigate();
   
@@ -36,14 +42,16 @@ export function StatusCard({
       <CardHeader className="bg-gradient-to-r from-blue-600/90 to-violet-600/90 text-white">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
+            {icon || <AlertCircle className="h-5 w-5" />}
             Status do Sistema
           </CardTitle>
-          <NotificationPanel
-            notificationCount={notificationCount}
-            notifications={notifications}
-            onMarkAllAsRead={onMarkAllAsRead}
-          />
+          {notifications && notificationCount && onMarkAllAsRead && (
+            <NotificationPanel
+              notificationCount={notificationCount}
+              notifications={notifications}
+              onMarkAllAsRead={onMarkAllAsRead}
+            />
+          )}
         </div>
         <CardDescription className="text-blue-100">
           Monitore o estado atual do sistema e acesse funções administrativas.
