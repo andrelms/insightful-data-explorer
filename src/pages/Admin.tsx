@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Database, Settings, FileText } from "lucide-react";
@@ -178,11 +177,11 @@ const Admin = () => {
       </div>
 
       <StatusCard 
-        isConnected={isConnected}
-        lastSync={lastSync}
-        notificationCount={notificationCount.toString()} 
-        notifications={notifications}
-        onMarkAllAsRead={markAllAsRead}
+        title="Notificações"
+        value={notificationCount.toString()} 
+        icon={<Bell className="h-5 w-5" />}
+        trend="up"
+        trendValue="12%"
       />
 
       <AdminTabs />
