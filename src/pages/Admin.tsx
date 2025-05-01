@@ -178,7 +178,6 @@ const Admin = () => {
       </div>
 
       <StatusCard 
-        value={notificationCount.toString()} 
         icon={<Bell className="h-5 w-5" />}
         trend="up"
         trendValue="12%"
