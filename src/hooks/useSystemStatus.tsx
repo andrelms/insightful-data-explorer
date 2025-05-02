@@ -1,139 +1,130 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
 
-interface SystemStatusData {
-  isConnected: boolean;
-  lastSync: string | null;
-  notificationCount: number;
-  notifications: any[];
-  activeConventions: number;
-  recentImports: number;
-  convTrend: {
-    value: number;
-    trend: string;
-  };
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
 }
 
 export function useSystemStatus() {
-  const [status, setStatus] = useState<SystemStatusData>({
-    isConnected: true,
-    lastSync: null,
-    notificationCount: 0,
-    notifications: [],
-    activeConventions: 0,
-    recentImports: 0,
-    convTrend: { value: 0.05, trend: 'up' }
-  });
-
-  const fetchSystemStatus = async () => {
-    try {
-      // Verificar conexão com o banco
-      const { data: connectionTest, error: connectionError } = await supabase
-        .from('configuracoes')
-        .select('count(*)')
-        .limit(1)
-        .single();
-        
-      const isConnected = !connectionError;
-      
-      // Buscar última atualização
-      const { data: lastUpdate, error: updateError } = await supabase
-        .from('convencoes')
-        .select('updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-        
-      let lastSync = null;
-      
-      if (!updateError && lastUpdate) {
-        lastSync = new Date(lastUpdate.updated_at).toLocaleDateString();
-      } else {
-        // Tentar obter de uploads
-        const { data: lastUpload } = await supabase
-          .from('uploaded_files')
-          .select('uploaded_at')
-          .order('uploaded_at', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (lastUpload) {
-          lastSync = new Date(lastUpload.uploaded_at).toLocaleDateString();
-        } else {
-          // Se não encontrar nenhum, usar "0" ao invés de null
-          lastSync = "0";
-        }
-      }
-      
-      // Buscar notificações (logs de erro)
-      const { data: errorLogs, error: logsError } = await supabase
-        .from('system_logs')
-        .select('count')
-        .eq('level', 'ERROR')
-        .single();
-        
-      let notificationCount = 0;
-      if (!logsError && errorLogs) {
-        notificationCount = parseInt(errorLogs.count) || 0;
-      }
-      
-      // Buscar últimas notificações
-      const { data: recentLogs, error: recentLogsError } = await supabase
-        .from('system_logs')
-        .select('id, timestamp, level, message, module')
-        .order('timestamp', { ascending: false })
-        .limit(5);
-        
-      const notifications = !recentLogsError && recentLogs ? recentLogs.map(log => ({
-        id: log.id,
-        title: `${log.level}: ${log.module || 'Sistema'}`,
-        message: log.message,
-        date: new Date(log.timestamp).toLocaleString(),
-        read: false
-      })) : [];
-
-      setStatus({
-        isConnected,
-        lastSync,
-        notificationCount,
-        notifications,
-        activeConventions: 0, // These could be populated with actual data in a future update
-        recentImports: 0,
-        convTrend: { value: 0.05, trend: 'up' }
-      });
-    } catch (error) {
-      console.error("Erro ao buscar status do sistema:", error);
-      setStatus(prev => ({ ...prev, isConnected: false }));
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      // Atualizar sistema de logs como lidos (aqui seria o código real)
-      // Por enquanto apenas atualizamos a interface
-      setStatus(prev => ({
-        ...prev,
-        notificationCount: 0,
-        notifications: prev.notifications.map(n => ({...n, read: true}))
-      }));
-      
-      toast({
-        title: "Notificações marcadas como lidas",
-        description: "Todas as notificações foram marcadas como lidas.",
-      });
-    } catch (error) {
-      console.error("Erro ao marcar notificações como lidas:", error);
-    }
-  };
+  const [isConnected, setIsConnected] = useState(true);
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  const [notificationCount, setNotificationCount] = useState<number>(0);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [activeConventions, setActiveConventions] = useState<number>(0);
+  const [recentImports, setRecentImports] = useState<number>(0);
+  const [convTrend, setConvTrend] = useState<number>(0);
 
   useEffect(() => {
-    fetchSystemStatus();
+    const checkSystemStatus = async () => {
+      try {
+        // Verificar conexão com o Supabase
+        const { error } = await supabase.from('configuracoes').select('count').limit(1);
+        
+        if (error) {
+          console.error("Erro ao verificar status do sistema:", error);
+          setIsConnected(false);
+        } else {
+          setIsConnected(true);
+        }
+
+        // Buscar informações reais do banco de dados
+        const fetchData = async () => {
+          // Convenções ativas
+          const { data: convencoesData, error: convError } = await supabase
+            .from('convencoes')
+            .select('count')
+            .gte('vigencia_fim', new Date().toISOString());
+          
+          if (!convError && convencoesData) {
+            setActiveConventions(convencoesData.length);
+          }
+
+          // Importações recentes
+          const { data: importacoesData, error: impError } = await supabase
+            .from('historico_importacao')
+            .select('*')
+            .gte('data_inicio', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+            .order('data_inicio', { ascending: false });
+          
+          if (!impError && importacoesData) {
+            setRecentImports(importacoesData.length);
+            
+            // Obter última sincronização
+            if (importacoesData.length > 0) {
+              setLastSync(importacoesData[0].data_fim || importacoesData[0].data_inicio);
+            }
+          }
+
+          // Buscar tendência de crescimento - comparar últimos 30 dias com 30 dias anteriores
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+          
+          const [current, previous] = await Promise.all([
+            supabase.from('convencoes').select('count').gte('created_at', thirtyDaysAgo),
+            supabase.from('convencoes').select('count')
+              .lt('created_at', thirtyDaysAgo)
+              .gte('created_at', sixtyDaysAgo)
+          ]);
+          
+          const currentCount = current.data?.length || 0;
+          const previousCount = previous.data?.length || 0;
+          
+          if (previousCount === 0) {
+            setConvTrend(currentCount > 0 ? 100 : 0);
+          } else {
+            const trendPercent = ((currentCount - previousCount) / previousCount) * 100;
+            setConvTrend(Math.round(trendPercent));
+          }
+
+          // Buscar notificações
+          const { data: notificationsData } = await supabase
+            .from('feed_noticias')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(5);
+          
+          if (notificationsData) {
+            const mappedNotifications: Notification[] = notificationsData.map(item => ({
+              id: item.id,
+              title: item.titulo || 'Notificação',
+              message: item.conteudo || '',
+              timestamp: item.created_at,
+              read: false
+            }));
+            
+            setNotifications(mappedNotifications);
+            setNotificationCount(mappedNotifications.length);
+          }
+        };
+        
+        await fetchData();
+      } catch (error) {
+        console.error("Erro ao verificar status do sistema:", error);
+        setIsConnected(false);
+      }
+    };
+
+    checkSystemStatus();
   }, []);
 
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotificationCount(0);
+  };
+
   return {
-    ...status,
+    isConnected,
+    lastSync,
+    notificationCount: notificationCount.toString(), // Convert to string for type safety
+    notifications,
+    activeConventions,
+    recentImports,
+    convTrend,
     markAllAsRead
   };
 }

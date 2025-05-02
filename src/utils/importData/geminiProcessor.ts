@@ -26,6 +26,8 @@ export async function processDataBlockWithGemini(dataBlock: any[], apiKey: strin
       Retorne os dados estruturados no mesmo formato que recebeu, porém com as correções e enriquecimentos.
     `;
     
+    console.log("Enviando dados para processamento com Gemini...");
+    
     // Prepare the payload for the API
     const payload = {
       contents: [
@@ -55,11 +57,14 @@ export async function processDataBlockWithGemini(dataBlock: any[], apiKey: strin
       body: JSON.stringify(payload),
     });
     
+    console.log("Resposta da API Gemini:", response.status);
+    
     if (!response.ok) {
       throw new Error(`Erro na API do Gemini: ${response.status} ${response.statusText}`);
     }
     
     const responseData = await response.json();
+    console.log("Dados recebidos do Gemini");
     
     // Extract and process the response
     if (responseData.candidates && responseData.candidates[0]?.content?.parts?.[0]?.text) {
@@ -77,6 +82,7 @@ export async function processDataBlockWithGemini(dataBlock: any[], apiKey: strin
           if (!jsonStr.trim().startsWith('[')) {
             jsonStr = '[' + jsonStr + ']';
           }
+          console.log("Processando JSON da resposta do Gemini");
           return JSON.parse(jsonStr);
         } catch (error) {
           console.error("Erro ao fazer parse da resposta JSON:", error);
@@ -85,6 +91,7 @@ export async function processDataBlockWithGemini(dataBlock: any[], apiKey: strin
       } else {
         // Try to extract JSON directly from the full response
         try {
+          console.log("Tentando processar resposta completa como JSON");
           return JSON.parse(responseText);
         } catch (error) {
           console.error("Não foi possível encontrar ou analisar JSON na resposta:", error);
