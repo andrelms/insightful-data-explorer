@@ -8,9 +8,21 @@ export interface Notification {
   message: string;
   timestamp: string;
   read: boolean;
+  date?: string; // Adicionando a propriedade date para compatibilidade
 }
 
-export function useSystemStatus() {
+export interface SystemStatusData {
+  isConnected: boolean;
+  lastSync: string | null;
+  notificationCount: string; // Alterado para string para compatibilidade
+  notifications: Notification[];
+  activeConventions: number;
+  recentImports: number;
+  convTrend: number;
+  markAllAsRead: () => void;
+}
+
+export function useSystemStatus(): SystemStatusData {
   const [isConnected, setIsConnected] = useState(true);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [notificationCount, setNotificationCount] = useState<number>(0);
@@ -94,6 +106,7 @@ export function useSystemStatus() {
               title: item.titulo || 'Notificação',
               message: item.conteudo || '',
               timestamp: item.created_at,
+              date: item.created_at, // Adicionando a propriedade date para compatibilidade
               read: false
             }));
             
@@ -120,7 +133,7 @@ export function useSystemStatus() {
   return {
     isConnected,
     lastSync,
-    notificationCount: notificationCount.toString(), // Convert to string for type safety
+    notificationCount: notificationCount.toString(), // Convertendo para string para compatibilidade
     notifications,
     activeConventions,
     recentImports,
