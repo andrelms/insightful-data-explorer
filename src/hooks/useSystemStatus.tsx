@@ -8,17 +8,17 @@ export interface Notification {
   message: string;
   timestamp: string;
   read: boolean;
-  date?: string; // Adicionando a propriedade date para compatibilidade
+  date?: string; // Making date optional to match components
 }
 
 export interface SystemStatusData {
   isConnected: boolean;
   lastSync: string | null;
-  notificationCount: string; // Alterado para string para compatibilidade
+  notificationCount: number; // Changed to number
   notifications: Notification[];
   activeConventions: number;
   recentImports: number;
-  convTrend: number;
+  convTrend: number; // Changed to number
   markAllAsRead: () => void;
 }
 
@@ -106,7 +106,7 @@ export function useSystemStatus(): SystemStatusData {
               title: item.titulo || 'Notificação',
               message: item.conteudo || '',
               timestamp: item.created_at,
-              date: item.created_at, // Adicionando a propriedade date para compatibilidade
+              date: item.created_at, // Ensuring date is set for compatibility
               read: false
             }));
             
@@ -133,11 +133,11 @@ export function useSystemStatus(): SystemStatusData {
   return {
     isConnected,
     lastSync,
-    notificationCount: notificationCount.toString(), // Convertendo para string para compatibilidade
+    notificationCount, // Now returning as number
     notifications,
     activeConventions,
     recentImports,
-    convTrend,
+    convTrend, // Now returning as number
     markAllAsRead
   };
 }

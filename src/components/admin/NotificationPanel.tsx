@@ -10,7 +10,7 @@ interface Notification {
   id: string | number;
   title: string;
   message: string;
-  date: string;
+  date?: string; // Making date optional
   read: boolean;
 }
 
@@ -54,7 +54,7 @@ export function NotificationPanel({
               <div key={notification.id || i} className={`p-4 border-b last:border-0 ${notification.read ? 'bg-background' : 'bg-muted/30'}`}>
                 <div className="flex justify-between items-start">
                   <h4 className="text-sm font-medium">{notification.title}</h4>
-                  <span className="text-xs text-muted-foreground">{notification.date}</span>
+                  <span className="text-xs text-muted-foreground">{notification.date || ''}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
               </div>

@@ -10,7 +10,7 @@ interface Notification {
   id: string | number;
   title: string;
   message: string;
-  date: string;
+  date?: string; // Making date optional to match NotificationPanel
   read: boolean;
 }
 

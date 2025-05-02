@@ -7,7 +7,7 @@ interface AdminMetricsCardsProps {
   activeConventions: number;
   recentImports: number;
   notificationCount: number;
-  convTrend: { value: number; trend: string };
+  convTrend: number;
 }
 
 export function AdminMetricsCards({
@@ -16,6 +16,9 @@ export function AdminMetricsCards({
   notificationCount,
   convTrend
 }: AdminMetricsCardsProps) {
+  // Determine if trend is up or down based on the value
+  const trendDirection = convTrend >= 0 ? 'up' : 'down';
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div className="card p-6 border rounded-lg shadow-sm">
@@ -30,8 +33,8 @@ export function AdminMetricsCards({
         <div className="flex items-center justify-between mt-2">
           <span className="text-sm text-muted-foreground">Ativas</span>
           <div className="flex items-center text-xs">
-            <span className={`${convTrend.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-              {convTrend.value * 100}%
+            <span className={`${trendDirection === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+              {Math.abs(convTrend)}%
             </span>
           </div>
         </div>
@@ -62,7 +65,7 @@ export function AdminMetricsCards({
           </div>
           <Button size="sm" variant="outline">Ver todas</Button>
         </div>
-        <p className="text-3xl font-bold">{notificationCount.toString()}</p>
+        <p className="text-3xl font-bold">{notificationCount}</p>
         <div className="flex items-center justify-between mt-2">
           <span className="text-sm text-muted-foreground">Não lidas</span>
           <div className="flex items-center text-xs">
