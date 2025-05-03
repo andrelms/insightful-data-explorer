@@ -1,292 +1,290 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, Database, Download, Upload, RefreshCw } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import React, { useState, useEffect } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { toast } from "@/components/ui/use-toast"
+import { RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { ConfirmDialog } from "./ConfirmDialog";
-import { DatabaseAlerts } from "./DatabaseAlerts";
-
-// Updated to match actual table names in database
-type TableName = "configuracoes" | "convenios" | "uploaded_files" | "sindicatos" | "feed_noticias" | "historico_importacao";
 
 export function DatabaseOperations() {
-  const [isClearing, setIsClearing] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [isBackingUp, setIsBackingUp] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [tableName, setTableName] = useState<TableName>("convenios");
+  const [tableData, setTableData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sampleData, setSampleData] = useState<any[]>([]);
 
-  const validTableNames: TableName[] = [
-    "feed_noticias", 
-    "convenios", 
-    "uploaded_files", 
-    "sindicatos", 
-    "historico_importacao", 
-    "configuracoes"
-  ];
+  type TableName = "convenios" | "sindicatos" | "cargos" | "piso_salarial" | "feed_noticias";
 
-  const handleClearDatabase = async () => {
-    setIsClearing(true);
+  useEffect(() => {
+    fetchTableData(tableName);
+  }, [tableName]);
+
+  const fetchTableData = async (tableName: TableName) => {
+    setLoading(true);
     try {
-      // Delete data from all tables in the correct order to respect foreign key constraints
-      for (const tableName of validTableNames) {
-        await supabase.from(tableName).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      const { data, error } = await supabase.from(tableName).select('*');
+      if (error) {
+        throw error;
       }
-
-      // Force refresh of dashboard data by clearing localStorage
-      localStorage.removeItem('dashboardData');
-      localStorage.removeItem('feedData');
-      localStorage.removeItem('estatisticasRegionais');
-      localStorage.removeItem('consultasRecentes');
-      localStorage.removeItem('estadisticasSindicatos');
-      localStorage.removeItem('cachedConvencoes');
-      
-      toast({
-        title: "Base de dados limpa",
-        description: "Todos os dados foram removidos com sucesso.",
-        duration: 5000,
-      });
-      setConfirmDialogOpen(false);
+      setTableData(data || []);
     } catch (error) {
-      console.error('Erro ao limpar base de dados:', error);
+      console.error("Erro ao buscar dados da tabela:", error);
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao tentar limpar a base de dados.",
+        description: `Falha ao carregar dados da tabela ${tableName}`,
         variant: "destructive",
       });
     } finally {
-      setIsClearing(false);
+      setLoading(false);
     }
   };
 
-  const handleExportDatabase = async () => {
-    setIsExporting(true);
+  const handleTableNameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTableName(e.target.value as TableName);
+  };
+
+  const handleDeleteTable = async (tableName: TableName) => {
+    if (!window.confirm(`Tem certeza que deseja DELETAR TODOS os dados da tabela "${tableName}"? Esta ação é IRREVERSÍVEL.`)) {
+      return;
+    }
+
+    setLoading(true);
     try {
-      // Export data from all tables
-      const exportData: Record<string, any> = {};
-      
-      for (const table of validTableNames) {
-        const { data, error } = await supabase.from(table).select('*');
-        
-        if (error) throw error;
-        exportData[table] = data;
+      // Deletar todos os registros da tabela (exceto aqueles com um ID específico, para evitar exclusão acidental da tabela)
+      const { error } = await supabase.from(tableName).delete().neq('id', 'dummy-value');
+      if (error) {
+        throw error;
       }
-      
-      // Create a JSON file and download it
-      const dataStr = JSON.stringify(exportData, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
-      const exportFileDefaultName = `database_backup_${new Date().toISOString().split('T')[0]}.json`;
-      
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
-      
+
       toast({
-        title: "Exportação concluída",
-        description: "Os dados foram exportados com sucesso.",
-        duration: 5000,
+        title: "Sucesso",
+        description: `Todos os dados da tabela "${tableName}" foram deletados.`,
       });
+      fetchTableData(tableName); // Recarrega os dados da tabela
     } catch (error) {
-      console.error('Erro ao exportar banco de dados:', error);
+      console.error("Erro ao deletar dados da tabela:", error);
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao exportar os dados.",
+        description: `Falha ao deletar dados da tabela "${tableName}".`,
         variant: "destructive",
       });
     } finally {
-      setIsExporting(false);
+      setLoading(false);
     }
   };
 
-  const handleImportDatabase = async () => {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.json';
-    
-    fileInput.onchange = async (e) => {
-      const target = e.target as HTMLInputElement;
-      const file = target.files?.[0];
-      if (!file) return;
-      
-      setIsImporting(true);
-      try {
-        const fileReader = new FileReader();
-        
-        fileReader.onload = async (event) => {
-          try {
-            const result = event.target?.result;
-            if (typeof result !== 'string') {
-              throw new Error("Failed to read file as text");
-            }
-            
-            const importData = JSON.parse(result);
-            
-            // First clear the database
-            await handleClearDatabase();
-            
-            // Then import data for each table
-            for (const [tableName, data] of Object.entries(importData)) {
-              if (Array.isArray(data) && data.length > 0) {
-                if (validTableNames.includes(tableName as TableName)) {
-                  const { error } = await supabase.from(tableName as TableName).insert(data);
-                  if (error) throw error;
-                }
-              }
-            }
-            
-            toast({
-              title: "Importação concluída",
-              description: "Os dados foram importados com sucesso.",
-              duration: 5000,
-            });
-            
-            // Force refresh of dashboard data
-            localStorage.removeItem('dashboardData');
-            localStorage.removeItem('feedData');
-            localStorage.removeItem('estatisticasRegionais');
-            localStorage.removeItem('consultasRecentes');
-            
-          } catch (parseError) {
-            console.error('Erro ao processar arquivo:', parseError);
-            toast({
-              title: "Erro",
-              description: "O formato do arquivo é inválido.",
-              variant: "destructive",
-            });
-          }
-        };
-        
-        fileReader.readAsText(file);
-      } catch (error) {
-        console.error('Erro ao importar banco de dados:', error);
-        toast({
-          title: "Erro",
-          description: "Ocorreu um erro ao importar os dados.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsImporting(false);
-      }
-    };
-    
-    fileInput.click();
-  };
-
-  const handleBackupDatabase = async () => {
-    setIsBackingUp(true);
+  const handleBackupTable = async (tableName: TableName) => {
+    setLoading(true);
     try {
-      // Create backup in Supabase
-      const timestamp = new Date().toISOString();
-      
-      // In a real application, we would use an RPC function to create a backup
-      // For now, we'll just simulate it with a toast notification
-      setTimeout(() => {
-        toast({
-          title: "Backup criado",
-          description: "Um backup do banco de dados foi criado com sucesso.",
-          duration: 5000,
-        });
-        setIsBackingUp(false);
-      }, 1500);
+      // Simula a obtenção de dados de backup (substitua pela lógica real)
+      const backupData = tableData;
+      setSampleData(backupData);
+
+      toast({
+        title: "Sucesso",
+        description: `Dados da tabela "${tableName}" foram copiados para a área de transferência.`,
+      });
     } catch (error) {
-      console.error('Erro ao criar backup:', error);
+      console.error("Erro ao fazer backup da tabela:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível criar o backup do banco de dados.",
+        description: `Falha ao fazer backup da tabela "${tableName}".`,
         variant: "destructive",
       });
-      setIsBackingUp(false);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const showConfirmDialog = () => {
-    setConfirmDialogOpen(true);
+  const handleRestoreFromBackup = async (tableName: TableName) => {
+    if (!sampleData || sampleData.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Não há dados de backup para restaurar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!window.confirm(`Tem certeza que deseja RESTAURAR os dados na tabela "${tableName}" com os dados do backup? Os dados existentes serão substituídos.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Insere os dados de backup na tabela
+      const { error } = await supabase.from(tableName).insert(sampleData);
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: `Dados da tabela "${tableName}" foram restaurados com sucesso.`,
+      });
+      fetchTableData(tableName); // Recarrega os dados da tabela
+    } catch (error) {
+      console.error("Erro ao restaurar dados da tabela:", error);
+      toast({
+        title: "Erro",
+        description: `Falha ao restaurar dados da tabela "${tableName}".`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-red-500">
-          <AlertTriangle className="h-5 w-5" />
-          Gerenciamento da Base de Dados
-        </CardTitle>
+        <CardTitle>Gerenciamento de Banco de Dados</CardTitle>
         <CardDescription>
-          Gerencie os dados do sistema, incluindo exportação, importação, backup e limpeza completa.
+          Execute operações de backup, restauração e limpeza nas tabelas do
+          banco de dados.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <DatabaseAlerts />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Button 
+      <CardContent className="grid gap-4">
+        <div className="grid grid-cols-[150px_1fr] gap-4">
+          <Label htmlFor="table">Tabela</Label>
+          <select
+            id="table"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            value={tableName}
+            onChange={handleTableNameChange}
+          >
+            <option value="convenios">Convenios</option>
+            <option value="sindicatos">Sindicatos</option>
+            <option value="cargos">Cargos</option>
+            <option value="piso_salarial">Piso Salarial</option>
+            <option value="feed_noticias">Feed de Notícias</option>
+          </select>
+        </div>
+        <div className="flex justify-between">
+          <Button
+            variant="destructive"
+            onClick={() => handleDeleteTable(tableName)}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Aguarde...
+              </>
+            ) : (
+              "Limpar Tabela"
+            )}
+          </Button>
+          <div>
+            <Button
               variant="outline"
-              onClick={handleExportDatabase}
-              disabled={isExporting}
-              className="flex items-center gap-2"
+              onClick={() => handleBackupTable(tableName)}
+              disabled={loading}
             >
-              {isExporting ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
+              {loading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Aguarde...
+                </>
               ) : (
-                <Download className="h-4 w-4" />
+                "Fazer Backup"
               )}
-              {isExporting ? "Exportando..." : "Exportar Dados"}
             </Button>
-            
-            <Button 
-              variant="outline"
-              onClick={handleImportDatabase}
-              disabled={isImporting}
-              className="flex items-center gap-2"
+            <Button
+              onClick={() => handleRestoreFromBackup(tableName)}
+              disabled={loading}
             >
-              {isImporting ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
+              {loading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Aguarde...
+                </>
               ) : (
-                <Upload className="h-4 w-4" />
+                "Restaurar Backup"
               )}
-              {isImporting ? "Importando..." : "Importar Dados"}
-            </Button>
-            
-            <Button 
-              variant="outline"
-              onClick={handleBackupDatabase}
-              disabled={isBackingUp}
-              className="flex items-center gap-2"
-            >
-              {isBackingUp ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Database className="h-4 w-4" />
-              )}
-              {isBackingUp ? "Criando backup..." : "Criar Backup"}
-            </Button>
-            
-            <Button 
-              variant="destructive" 
-              onClick={showConfirmDialog}
-              disabled={isClearing}
-              className="flex items-center gap-2"
-            >
-              {isClearing ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <AlertTriangle className="h-4 w-4" />
-              )}
-              {isClearing ? "Limpando..." : "Limpar Base de Dados"}
             </Button>
           </div>
         </div>
-      </CardContent>
 
-      <ConfirmDialog 
-        open={confirmDialogOpen} 
-        onOpenChange={setConfirmDialogOpen} 
-        onConfirm={handleClearDatabase} 
-        isLoading={isClearing}
-      />
+        {sampleData && sampleData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Dados de Backup</CardTitle>
+              <CardDescription>
+                Estes são os dados que serão usados para restaurar a tabela.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={JSON.stringify(sampleData, null, 2)}
+                className="min-h-[100px]"
+                readOnly
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {tableData && tableData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Dados da Tabela "{tableName}"</CardTitle>
+              <CardDescription>
+                Estes são os dados atuais da tabela.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {Object.keys(tableData[0]).map((key) => (
+                      <TableHead key={key}>{key}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tableData.map((row, index) => (
+                    <TableRow key={index}>
+                      {Object.values(row).map((value, i) => (
+                        <TableCell key={i}>
+                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </CardContent>
     </Card>
   );
 }

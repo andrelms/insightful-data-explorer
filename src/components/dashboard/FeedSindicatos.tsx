@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -176,6 +175,15 @@ export function FeedSindicatos() {
     loadFeedData();
   };
 
+  const renderSindicatoName = (item: any) => {
+    if (item.sindicato_id) {
+      // Try to join on sindicato_id if sindicatos table has this data
+      return item.sindicatos?.nome || "Sindicato não especificado";
+    } else {
+      return "Sindicato não especificado";
+    }
+  };
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-blue-600/90 to-violet-600/90 text-white">
@@ -225,7 +233,7 @@ export function FeedSindicatos() {
                   </Avatar>
                   <div>
                     <div className="font-medium flex items-center gap-1">
-                      {item.source.name}
+                      {renderSindicatoName(item)}
                       {item.source.verified && (
                         <span className="inline-flex items-center justify-center rounded-full bg-blue-500 h-3 w-3">
                           <span className="text-[8px] text-white">✓</span>

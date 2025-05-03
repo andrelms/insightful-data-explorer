@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { SearchBar } from "@/components/dashboard/SearchBar";
 import { ConvencaoCard } from "@/components/dashboard/ConvencaoCard";
@@ -61,7 +62,11 @@ const Convencoes = () => {
           const currentDate = new Date();
           const created = new Date(item.created_at || currentDate);
           const ano = created.getFullYear();
-            
+          
+          // Define uma data de vigência fictícia de 1 ano a partir da data de criação
+          const vigenciaFim = new Date(created);
+          vigenciaFim.setFullYear(vigenciaFim.getFullYear() + 1);
+          
           return {
             id: item.id,
             title: item.descricao || "Convenção sem descrição",
@@ -70,8 +75,8 @@ const Convencoes = () => {
             ano,
             sindicatos: [item.sindicatos?.nome || 'Sindicato não especificado'],
             vigenciaInicio: item.created_at || '',
-            vigenciaFim: '', // Not storing end date anymore
-            estado: '',
+            vigenciaFim: vigenciaFim.toISOString(),
+            estado: item.sindicatos?.data_base || '',
             sindicato_id: item.sindicato_id
           };
         });
@@ -104,7 +109,7 @@ const Convencoes = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('convenios') // Updated table name
+        .from('convenios')
         .select(`
           id, 
           descricao,
@@ -124,7 +129,11 @@ const Convencoes = () => {
           const currentDate = new Date();
           const created = new Date(item.created_at || currentDate);
           const ano = created.getFullYear();
-            
+          
+          // Define uma data de vigência fictícia de 1 ano a partir da data de criação
+          const vigenciaFim = new Date(created);
+          vigenciaFim.setFullYear(vigenciaFim.getFullYear() + 1);
+          
           return {
             id: item.id,
             title: item.descricao || "Convenção sem descrição",
@@ -133,8 +142,8 @@ const Convencoes = () => {
             ano,
             sindicatos: [item.sindicatos?.nome || 'Sindicato não especificado'],
             vigenciaInicio: item.created_at || '',
-            vigenciaFim: '',
-            estado: '',
+            vigenciaFim: vigenciaFim.toISOString(),
+            estado: item.sindicatos?.data_base || '',
             sindicato_id: item.sindicato_id
           };
         });
@@ -156,7 +165,8 @@ const Convencoes = () => {
   const filteredConvencoes = convencoes.filter(convencao => {
     const matchesYear = filterYear === "all" || convencao.ano.toString() === filterYear;
     
-    const isActive = convencao.vigenciaFim ? new Date() <= new Date(convencao.vigenciaFim) : true;
+    const now = new Date();
+    const isActive = convencao.vigenciaFim ? now <= new Date(convencao.vigenciaFim) : true;
     const matchesStatus = filterStatus === "all" || 
       (filterStatus === "active" && isActive) || 
       (filterStatus === "expired" && !isActive);

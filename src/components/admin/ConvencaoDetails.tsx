@@ -35,23 +35,35 @@ export function ConvencaoDetails({ id }: ConvencaoDetailsProps) {
         if (convencaoError) throw convencaoError;
         setConvencao(convencaoData);
 
-        // Buscar pisos salariais
-        const { data: pisosData, error: pisosError } = await supabase
-          .from('piso_salarial')
+        // Buscar pisos salariais através dos cargos
+        const { data: cargosData, error: cargosError } = await supabase
+          .from('cargos')
           .select('*')
-          .eq('cargo_id', id);
+          .eq('convenio_id', id);
+        
+        if (cargosError) throw cargosError;
+        
+        // Se temos cargos, vamos buscar os pisos salariais relacionados a eles
+        if (cargosData && cargosData.length > 0) {
+          const cargoIds = cargosData.map(cargo => cargo.id);
+          
+          const { data: pisosData, error: pisosError } = await supabase
+            .from('piso_salarial')
+            .select('*')
+            .in('cargo_id', cargoIds);
 
-        if (pisosError) throw pisosError;
-        setPisosSalariais(pisosData || []);
+          if (pisosError) throw pisosError;
+          setPisosSalariais(pisosData || []);
+          
+          // Buscar particularidades relacionadas aos cargos
+          const { data: particularidadesData, error: particularidadesError } = await supabase
+            .from('particularidades')
+            .select('*')
+            .in('cargo_id', cargoIds);
 
-        // Buscar particularidades
-        const { data: particularidadesData, error: particularidadesError } = await supabase
-          .from('particularidades')
-          .select('*')
-          .eq('cargo_id', id);
-
-        if (particularidadesError) throw particularidadesError;
-        setParticularidades(particularidadesData || []);
+          if (particularidadesError) throw particularidadesError;
+          setParticularidades(particularidadesData || []);
+        }
 
         // Buscar licenças
         const { data: licencasData, error: licencasError } = await supabase
@@ -62,8 +74,15 @@ export function ConvencaoDetails({ id }: ConvencaoDetailsProps) {
         if (licencasError) throw licencasError;
         setLicencas(licencasData || []);
 
-        // Não buscamos mais benefícios pois agora eles seriam particularidades com categoria específica
-        setBeneficios([]);
+        // Extrair benefícios das particularidades
+        if (particularidades.length > 0) {
+          const beneficiosData = particularidades.filter(p => 
+            p.categoria && p.categoria.toLowerCase().includes('benefício')
+          );
+          setBeneficios(beneficiosData);
+        } else {
+          setBeneficios([]);
+        }
 
       } catch (error) {
         console.error("Erro ao buscar dados da convenção:", error);
@@ -75,7 +94,7 @@ export function ConvencaoDetails({ id }: ConvencaoDetailsProps) {
     if (id) {
       fetchData();
     }
-  }, [id]);
+  }, [id, particularidades.length]);
 
   const formatarData = (dataString: string | null) => {
     if (!dataString) return "-";

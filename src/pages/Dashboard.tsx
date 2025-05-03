@@ -1,4 +1,3 @@
-
 import { SearchBar } from "@/components/dashboard/SearchBar";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ConvencaoCard } from "@/components/dashboard/ConvencaoCard";
@@ -17,6 +16,7 @@ interface RegionalStat {
 }
 
 interface ConvencaoData {
+  id: string;
   title: string;
   numero: string;
   ano: number;
@@ -66,37 +66,43 @@ const Dashboard = () => {
     setIsLoading(true);
     try {
       // Buscar dados das tabelas principais
-      const [convencoesResult, sindicatosResult, feedsResult, uploadsResult] = await Promise.all([
-        supabase.from('convencoes').select('*').order('created_at', { ascending: false }),
+      const [conveniosResult, sindicatosResult, feedsResult, uploadsResult] = await Promise.all([
+        supabase.from('convenios').select('*').order('created_at', { ascending: false }),
         supabase.from('sindicatos').select('*'),
-        supabase.from('feed_noticias').select('*').order('data_publicacao', { ascending: false }).limit(5),
+        supabase.from('feed_noticias').select('*').order('created_at', { ascending: false }).limit(5),
         supabase.from('uploaded_files').select('*')
       ]);
 
       // Verificar se há dados
-      const hasConvencoes = convencoesResult.data && convencoesResult.data.length > 0;
+      const hasConvenios = conveniosResult.data && conveniosResult.data.length > 0;
       const hasSindicatos = sindicatosResult.data && sindicatosResult.data.length > 0;
       
-      setHasData(hasConvencoes || hasSindicatos);
+      setHasData(hasConvenios || hasSindicatos);
       
       // Calcular estatísticas
-      let totalConvencoes = convencoesResult.data?.length || 0;
+      let totalConvencoes = conveniosResult.data?.length || 0;
       const now = new Date();
-      const convencoesVigentes = hasConvencoes 
-        ? convencoesResult.data.filter(c => c.vigencia_fim && new Date(c.vigencia_fim) >= now).length
+      // No nosso novo modelo, consideraremos todas as convenções dos últimos 30 dias como vigentes
+      const convencoesVigentes = hasConvenios 
+        ? conveniosResult.data.filter(c => {
+            const createdDate = new Date(c.created_at);
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return createdDate >= thirtyDaysAgo;
+          }).length
         : 0;
       
-      // Convenções pendentes são aquelas recentemente importadas sem dados completos
-      const convencoesPendentes = hasConvencoes
-        ? convencoesResult.data.filter(c => !c.vale_refeicao || !c.data_base).length
+      // Convenções pendentes são aquelas sem sindicato associado
+      const convencoesPendentes = hasConvenios
+        ? conveniosResult.data.filter(c => !c.sindicato_id).length
         : 0;
       
       // Determinar a última atualização
-      const lastUpdated = convencoesResult.data?.[0]?.updated_at 
-        ? new Date(convencoesResult.data[0].updated_at).toLocaleDateString('pt-BR')
+      const lastUpdated = conveniosResult.data?.[0]?.updated_at 
+        ? new Date(conveniosResult.data[0].updated_at).toLocaleDateString('pt-BR')
         : uploadsResult.data?.[0]?.uploaded_at
           ? new Date(uploadsResult.data[0].uploaded_at).toLocaleDateString('pt-BR')
-          : "0"; // Usar "0" em vez de "N/A"
+          : "0";
       
       // Atualizar stats
       setStats([
@@ -131,15 +137,20 @@ const Dashboard = () => {
       ]);
         
       // Transformar dados de convenções para exibição
-      if (hasConvencoes) {
-        const transformedConvencoes: ConvencaoData[] = convencoesResult.data.slice(0, 4).map(c => {
+      if (hasConvenios) {
+        const transformedConvencoes: ConvencaoData[] = conveniosResult.data.slice(0, 4).map(c => {
+          const createdDate = new Date(c.created_at || new Date());
+          const year = createdDate.getFullYear();
+
           return {
-            title: c.titulo || `Convenção #${c.id.substring(0, 8)}`,
+            id: c.id,
+            title: c.descricao || `Convenio #${c.id.substring(0, 8)}`,
             numero: c.id,
-            ano: c.vigencia_inicio ? new Date(c.vigencia_inicio).getFullYear() : new Date().getFullYear(),
-            sindicatos: [c.sindicato_id ? "SINDICATO" : "EMPREGADORES", "TRABALHADORES"],
-            vigenciaInicio: c.vigencia_inicio,
-            vigenciaFim: c.vigencia_fim
+            ano: year,
+            sindicatos: c.sindicato_id ? ["SINDICATO"] : ["Não especificado"],
+            vigenciaInicio: c.created_at,
+            // Definimos uma data de vigência fictícia de 1 ano a partir da data de criação
+            vigenciaFim: new Date(createdDate.getFullYear() + 1, createdDate.getMonth(), createdDate.getDate()).toISOString()
           };
         });
         
@@ -160,8 +171,8 @@ const Dashboard = () => {
         ).length;
         
         setSindicatosPorCategoria({
-          trabalhadores,
-          empregadores
+          trabalhadores: trabalhadores || 0,
+          empregadores: empregadores || 0
         });
 
         const regions = ["Sudeste", "Nordeste", "Sul", "Centro-Oeste", "Norte"];
@@ -182,22 +193,27 @@ const Dashboard = () => {
             return false;
           }).length;
           
-          // Encontrar convenções relacionadas à região
-          const convencoesCount = convencoesResult.data ? convencoesResult.data.filter(c => {
-            const estado = c.estado ? c.estado.toUpperCase() : '';
-            if (regiao === "Sudeste") {
-              return ["SP", "MG", "RJ", "ES"].includes(estado);
-            } else if (regiao === "Nordeste") {
-              return ["BA", "PE", "CE", "MA", "PB", "RN", "AL", "SE", "PI"].includes(estado);
-            } else if (regiao === "Sul") {
-              return ["RS", "PR", "SC"].includes(estado);
-            } else if (regiao === "Centro-Oeste") {
-              return ["MT", "MS", "GO", "DF"].includes(estado);
-            } else if (regiao === "Norte") {
-              return ["AM", "PA", "TO", "RO", "AC", "AP", "RR"].includes(estado);
-            }
-            return false;
-          }).length : 0;
+          // Encontrar convenções relacionadas à região baseado nos sindicatos
+          const convencoesCount = conveniosResult.data 
+            ? conveniosResult.data.filter(c => {
+                const sindicato = sindicatosResult.data?.find(s => s.id === c.sindicato_id);
+                if (!sindicato || !sindicato.estado) return false;
+                
+                const estado = sindicato.estado.toUpperCase();
+                if (regiao === "Sudeste") {
+                  return ["SP", "MG", "RJ", "ES"].includes(estado);
+                } else if (regiao === "Nordeste") {
+                  return ["BA", "PE", "CE", "MA", "PB", "RN", "AL", "SE", "PI"].includes(estado);
+                } else if (regiao === "Sul") {
+                  return ["RS", "PR", "SC"].includes(estado);
+                } else if (regiao === "Centro-Oeste") {
+                  return ["MT", "MS", "GO", "DF"].includes(estado);
+                } else if (regiao === "Norte") {
+                  return ["AM", "PA", "TO", "RO", "AC", "AP", "RR"].includes(estado);
+                }
+                return false;
+              }).length 
+            : 0;
           
           return {
             regiao,

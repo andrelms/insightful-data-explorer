@@ -46,11 +46,13 @@ export function useSystemStatus(): SystemStatusData {
 
         // Buscar informações reais do banco de dados
         const fetchData = async () => {
-          // Convenções ativas
+          // Convenções ativas - usando convenios em vez de convencoes
           const { data: convencoesData, error: convError } = await supabase
-            .from('convencoes')
+            .from('convenios')
             .select('count')
-            .gte('vigencia_fim', new Date().toISOString());
+            // Não usamos mais vigencia_fim na nossa estrutura de dados
+            // Vamos considerar todas como ativas por enquanto
+            .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
           
           if (!convError && convencoesData) {
             setActiveConventions(convencoesData.length);
@@ -77,8 +79,8 @@ export function useSystemStatus(): SystemStatusData {
           const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
           
           const [current, previous] = await Promise.all([
-            supabase.from('convencoes').select('count').gte('created_at', thirtyDaysAgo),
-            supabase.from('convencoes').select('count')
+            supabase.from('convenios').select('count').gte('created_at', thirtyDaysAgo),
+            supabase.from('convenios').select('count')
               .lt('created_at', thirtyDaysAgo)
               .gte('created_at', sixtyDaysAgo)
           ]);
@@ -133,11 +135,11 @@ export function useSystemStatus(): SystemStatusData {
   return {
     isConnected,
     lastSync,
-    notificationCount, // Now returning as number
+    notificationCount,
     notifications,
     activeConventions,
     recentImports,
-    convTrend, // Now returning as number
+    convTrend,
     markAllAsRead
   };
 }
