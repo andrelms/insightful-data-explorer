@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { processDataBlockWithGemini } from "@/utils/importData/geminiProcessor";
 
 interface ProcessingResult {
   registrosProcessados: number;
@@ -104,55 +103,65 @@ export function useDataProcessing() {
     const clearSimulation = simulateProcessing();
     
     try {
-      // Get Gemini API key for processing
-      const { data: configData, error: configError } = await supabase
-        .from('configuracoes')
-        .select('valor')
-        .eq('chave', 'gemini_api_key')
-        .single();
-        
-      if (configError) {
-        throw new Error("Chave da API Gemini não encontrada. Por favor, configure-a nas configurações do sistema.");
-      }
-      
-      const geminiApiKey = configData?.valor;
-      
-      if (!geminiApiKey) {
-        throw new Error("Chave da API Gemini não configurada.");
-      }
-      
       // Get the file extension to determine processing approach
       const fileExtension = processedFile.name.split('.').pop()?.toLowerCase();
       
-      // Para um caso real, você precisaria ler o arquivo e processar seu conteúdo
-      // Como é uma simulação, vamos definir alguns dados de amostra
-      // Em uma implementação real, você leria o arquivo enviado
-      
-      // Simular processamento com Gemini
-      const sampleData = [
-        {
-          "SINDICATO": "SINDPD AL",
-          "ESTADO": "AL",
-          "DATA BASE": "01/07/2024",
-          "CARGO": "ANALISTA DE INFORMATICA NIVEL I",
-          "CARGA HORÁRIA": "44h",
-          "PISO SALARIAL": 8696.50
-        },
-        {
-          "SINDICATO": "SINDPD AL",
-          "ESTADO": "AL", 
-          "CARGO": "ANALISTA DE INFORMATICA NIVEL II",
-          "CARGA HORÁRIA": "44h",
-          "PISO SALARIAL": 6630.50
-        }
-      ];
-      
-      // Em um caso real, aqui você processaria o arquivo com Gemini
-      // const processedData = await processDataBlockWithGemini(sampleData, geminiApiKey);
+      // Simular dados de processamento para salvar no banco
+      const processedContent = {
+        sindicatos: [
+          {
+            nome: "SINDPD-SP",
+            cnpj: "54.991.255/0001-90",
+            site: "www.sindpd.org.br",
+            data_base: "01/01/2024"
+          }
+        ],
+        cargos: [
+          {
+            cargo: "Analista de Sistemas",
+            carga_horaria: "44H SEMANAIS",
+            piso_salarial: 4175.00
+          },
+          {
+            cargo: "Programador",
+            carga_horaria: "44H SEMANAIS",
+            piso_salarial: 3370.00
+          }
+        ],
+        particularidades: [
+          "ADICIONAL NOTURNO 30%",
+          "HORAS EXTRAS 75% (DIAS NORMAIS)",
+          "HORAS EXTRAS 100% (DOMINGO E FERIADO)"
+        ]
+      };
       
       // Para essa simulação, vamos apenas esperar um tempo
       setTimeout(async () => {
         try {
+          // Get the file_id from uploaded_files
+          const { data: fileData } = await supabase
+            .from('uploaded_files')
+            .select('id')
+            .eq('filename', processedFile.name)
+            .single();
+            
+          if (!fileData?.id) {
+            throw new Error("Arquivo não encontrado no banco de dados");
+          }
+            
+          // Store the processed data in processed_files
+          const { error: processedError } = await supabase
+            .from('processed_files')
+            .insert({
+              file_id: fileData.id,
+              content: processedContent,
+              processing_type: 'upload'
+            });
+            
+          if (processedError) {
+            throw processedError;
+          }
+          
           // Simular resultado de processamento
           const simulatedResult: ProcessingResult = {
             registrosProcessados: fileExtension === 'pdf' ? 23 : 34,

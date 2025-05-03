@@ -89,24 +89,59 @@ export function ImportHistory() {
     try {
       setDetalhesImportacao(item);
       
-      if (item.registros_processados > 0) {
-        // Buscar convenções relacionadas a esta importação
-        const { data, error } = await supabase
-          .from('convencoes')
-          .select(`
-            id, titulo, tipo, estado, data_base, vigencia_inicio, vigencia_fim,
-            sindicatos(nome, cnpj),
-            pisos_salariais(cargo, piso_salarial, carga_horaria)
-          `)
-          .order('created_at', { ascending: false })
-          .limit(10); // Limitando a 10 registros como exemplo
+      // Fetch processed files related to this import
+      if (item.origem && item.origem.startsWith("Upload manual")) {
+        const filename = item.origem.replace("Upload manual - ", "").trim();
         
-        if (!error) {
-          setRegistrosProcessados(data || []);
-        } else {
-          console.error("Erro ao buscar convenções:", error);
-          setRegistrosProcessados([]);
+        // First get the file_id
+        const { data: fileData } = await supabase
+          .from('uploaded_files')
+          .select('id')
+          .eq('filename', filename)
+          .single();
+          
+        if (fileData?.id) {
+          // Then get processed data
+          const { data: processedData } = await supabase
+            .from('processed_files')
+            .select('*')
+            .eq('file_id', fileData.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+            
+          if (processedData && processedData.length > 0) {
+            setRegistrosProcessados(processedData);
+          } else {
+            setRegistrosProcessados([]);
+          }
         }
+      } else if (item.origem && item.origem.startsWith("Reprocessamento")) {
+        // Similar logic for reprocessed files
+        const filename = item.origem.replace("Reprocessamento - ", "").trim();
+        
+        const { data: fileData } = await supabase
+          .from('uploaded_files')
+          .select('id')
+          .eq('filename', filename)
+          .single();
+          
+        if (fileData?.id) {
+          const { data: processedData } = await supabase
+            .from('processed_files')
+            .select('*')
+            .eq('file_id', fileData.id)
+            .eq('processing_type', 'reprocessamento')
+            .order('created_at', { ascending: false })
+            .limit(1);
+            
+          if (processedData && processedData.length > 0) {
+            setRegistrosProcessados(processedData);
+          } else {
+            setRegistrosProcessados([]);
+          }
+        }
+      } else {
+        setRegistrosProcessados([]);
       }
       
       setDialogOpen(true);
