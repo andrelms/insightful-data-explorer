@@ -90,7 +90,7 @@ export function FeedSindicatos() {
       // Fetch real data from database
       const { data: feedData, error } = await supabase
         .from('feed_noticias')
-        .select('*, sindicato:sindicatos(nome)')
+        .select('*')
         .order('data_publicacao', { ascending: false })
         .limit(10);
       
@@ -98,20 +98,28 @@ export function FeedSindicatos() {
       
       if (feedData && feedData.length > 0) {
         // Transform to our FeedItem format
-        const transformedItems: FeedItem[] = feedData.map(item => ({
-          id: item.id,
-          type: "noticia", // Default type
-          source: {
-            name: item.sindicato?.nome || item.fonte || "Fonte não especificada",
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent((item.sindicato?.nome || item.fonte || "FN").substring(0, 2))}&background=0D8ABC&color=fff`,
-            verified: !!item.sindicato?.nome,
-          },
-          title: item.titulo,
-          content: item.conteudo || "Conteúdo não disponível",
-          date: new Date(item.data_publicacao),
-          tag: "Notícia",
-          url: item.url || "#"
-        }));
+        const transformedItems: FeedItem[] = feedData.map(item => {
+          let sourceName = item.fonte || "Fonte não especificada";
+          // Use simpler approach without join since relation might not exist
+          if (item.sindicato_id) {
+            sourceName = `Sindicato ID: ${item.sindicato_id}`;
+          }
+          
+          return {
+            id: item.id,
+            type: "noticia", // Default type
+            source: {
+              name: sourceName,
+              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent((sourceName || "FN").substring(0, 2))}&background=0D8ABC&color=fff`,
+              verified: !!item.sindicato_id,
+            },
+            title: item.titulo,
+            content: item.conteudo || "Conteúdo não disponível",
+            date: new Date(item.data_publicacao),
+            tag: "Notícia",
+            url: item.url || "#"
+          };
+        });
         
         setFeedItems(transformedItems);
         setLastUpdated(new Date());

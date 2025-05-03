@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,7 +24,7 @@ export function ConvencaoDetails({ id }: ConvencaoDetailsProps) {
       try {
         // Buscar dados principais da convenção
         const { data: convencaoData, error: convencaoError } = await supabase
-          .from('convencoes')
+          .from('convenios')
           .select(`
             *,
             sindicatos (*)
@@ -38,9 +37,9 @@ export function ConvencaoDetails({ id }: ConvencaoDetailsProps) {
 
         // Buscar pisos salariais
         const { data: pisosData, error: pisosError } = await supabase
-          .from('pisos_salariais')
+          .from('piso_salarial')
           .select('*')
-          .eq('convenio_id', id);
+          .eq('cargo_id', id);
 
         if (pisosError) throw pisosError;
         setPisosSalariais(pisosData || []);
@@ -49,7 +48,7 @@ export function ConvencaoDetails({ id }: ConvencaoDetailsProps) {
         const { data: particularidadesData, error: particularidadesError } = await supabase
           .from('particularidades')
           .select('*')
-          .eq('convenio_id', id);
+          .eq('cargo_id', id);
 
         if (particularidadesError) throw particularidadesError;
         setParticularidades(particularidadesData || []);
@@ -63,14 +62,8 @@ export function ConvencaoDetails({ id }: ConvencaoDetailsProps) {
         if (licencasError) throw licencasError;
         setLicencas(licencasData || []);
 
-        // Buscar benefícios
-        const { data: beneficiosData, error: beneficiosError } = await supabase
-          .from('beneficios')
-          .select('*')
-          .eq('convenio_id', id);
-
-        if (beneficiosError) throw beneficiosError;
-        setBeneficios(beneficiosData || []);
+        // Não buscamos mais benefícios pois agora eles seriam particularidades com categoria específica
+        setBeneficios([]);
 
       } catch (error) {
         console.error("Erro ao buscar dados da convenção:", error);

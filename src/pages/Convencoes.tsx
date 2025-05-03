@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { SearchBar } from "@/components/dashboard/SearchBar";
 import { ConvencaoCard } from "@/components/dashboard/ConvencaoCard";
@@ -42,17 +41,13 @@ const Convencoes = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('convencoes')
+        .from('convenios') // Updated table name
         .select(`
           id, 
-          titulo, 
-          tipo,
-          vigencia_inicio, 
-          vigencia_fim, 
-          data_base,
-          estado,
+          descricao, 
           sindicato_id,
-          sindicatos (nome, cnpj)
+          created_at,
+          sindicatos (nome, cnpj, site, data_base)
         `)
         .order('created_at', { ascending: false });
       
@@ -63,21 +58,20 @@ const Convencoes = () => {
       if (data) {
         // Transform the data to match our component's expected format
         const transformedData: Convencao[] = data.map(item => {
-          const vigenciaInicio = item.vigencia_inicio || '';
-          const ano = vigenciaInicio 
-            ? new Date(vigenciaInicio).getFullYear() 
-            : new Date().getFullYear();
+          const currentDate = new Date();
+          const created = new Date(item.created_at || currentDate);
+          const ano = created.getFullYear();
             
           return {
             id: item.id,
-            title: item.titulo,
-            titulo: item.titulo,
+            title: item.descricao || "Convenção sem descrição",
+            titulo: item.descricao || "Convenção sem descrição",
             numero: item.id.substring(0, 8),
             ano,
             sindicatos: [item.sindicatos?.nome || 'Sindicato não especificado'],
-            vigenciaInicio: item.vigencia_inicio || '',
-            vigenciaFim: item.vigencia_fim || '',
-            estado: item.estado || '',
+            vigenciaInicio: item.created_at || '',
+            vigenciaFim: '', // Not storing end date anymore
+            estado: '',
             sindicato_id: item.sindicato_id
           };
         });
@@ -110,19 +104,15 @@ const Convencoes = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('convencoes')
+        .from('convenios') // Updated table name
         .select(`
           id, 
-          titulo, 
-          tipo,
-          vigencia_inicio, 
-          vigencia_fim, 
-          data_base,
-          estado,
+          descricao,
           sindicato_id,
-          sindicatos (nome, cnpj)
+          created_at,
+          sindicatos (nome, cnpj, site, data_base)
         `)
-        .or(`titulo.ilike.%${query}%,sindicatos.nome.ilike.%${query}%`)
+        .or(`descricao.ilike.%${query}%,sindicatos.nome.ilike.%${query}%`)
         .order('created_at', { ascending: false });
         
       if (error) {
@@ -131,21 +121,20 @@ const Convencoes = () => {
       
       if (data) {
         const transformedData: Convencao[] = data.map(item => {
-          const vigenciaInicio = item.vigencia_inicio || '';
-          const ano = vigenciaInicio 
-            ? new Date(vigenciaInicio).getFullYear() 
-            : new Date().getFullYear();
+          const currentDate = new Date();
+          const created = new Date(item.created_at || currentDate);
+          const ano = created.getFullYear();
             
           return {
             id: item.id,
-            title: item.titulo,
-            titulo: item.titulo,
+            title: item.descricao || "Convenção sem descrição",
+            titulo: item.descricao || "Convenção sem descrição",
             numero: item.id.substring(0, 8),
             ano,
             sindicatos: [item.sindicatos?.nome || 'Sindicato não especificado'],
-            vigenciaInicio: item.vigencia_inicio || '',
-            vigenciaFim: item.vigencia_fim || '',
-            estado: item.estado || '',
+            vigenciaInicio: item.created_at || '',
+            vigenciaFim: '',
+            estado: '',
             sindicato_id: item.sindicato_id
           };
         });

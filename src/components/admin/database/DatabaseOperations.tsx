@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DatabaseAlerts } from "./DatabaseAlerts";
 
-type TableName = "configuracoes" | "convencoes" | "uploaded_files" | "sindicatos" | "feed_noticias" | "historico_importacao";
+// Updated to match actual table names in database
+type TableName = "configuracoes" | "convenios" | "uploaded_files" | "sindicatos" | "feed_noticias" | "historico_importacao";
 
 export function DatabaseOperations() {
   const [isClearing, setIsClearing] = useState(false);
@@ -19,7 +19,7 @@ export function DatabaseOperations() {
 
   const validTableNames: TableName[] = [
     "feed_noticias", 
-    "convencoes", 
+    "convenios", 
     "uploaded_files", 
     "sindicatos", 
     "historico_importacao", 

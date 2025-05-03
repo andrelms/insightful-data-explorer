@@ -80,42 +80,68 @@ const ConvencaoDetalhes = () => {
       try {
         // Buscar dados da convenção
         const { data: convencaoData, error: convencaoError } = await supabase
-          .from('convencoes')
+          .from('convenios')
           .select(`
-            id, titulo, tipo, estado, abrangencia, 
-            vigencia_inicio, vigencia_fim, data_base, 
-            assistencia_medica, vale_refeicao, vale_refeicao_valor, 
-            seguro_vida, uniforme, adicional_noturno,
-            sindicatos (nome, cnpj, site)
+            id, descricao, created_at,
+            sindicatos (nome, cnpj, site, data_base)
           `)
           .eq('id', id)
           .single();
           
         if (convencaoError) throw convencaoError;
         
-        // Buscar pisos salariais
-        const { data: pisosData, error: pisosError } = await supabase
-          .from('pisos_salariais')
-          .select('*')
+        // Buscar pisos salariais associados aos cargos dessa convênio
+        const { data: cargosData, error: cargosError } = await supabase
+          .from('cargos')
+          .select(`
+            id, cargo, carga_horaria,
+            piso_salarial (valor, descricao),
+            valores_hora (tipo, valor)
+          `)
           .eq('convenio_id', id);
-          
-        if (pisosError) throw pisosError;
+
+        if (cargosError) throw cargosError;
+        
+        // Transformar dados de cargos em pisos salariais
+        const pisosProcessed: PisoSalarial[] = [];
+        if (cargosData) {
+          cargosData.forEach(cargo => {
+            const pisoValor = cargo.piso_salarial && cargo.piso_salarial.length > 0 
+              ? cargo.piso_salarial[0].valor 
+              : null;
+              
+            // Processar valores de hora (normal, 50%, 100%)
+            let valorHoraNormal = null;
+            let valorHoraExtra50 = null;
+            let valorHoraExtra100 = null;
+            
+            if (cargo.valores_hora && Array.isArray(cargo.valores_hora)) {
+              cargo.valores_hora.forEach(valorHora => {
+                if (valorHora.tipo === 'normal') valorHoraNormal = valorHora.valor;
+                if (valorHora.tipo === 'extra_50') valorHoraExtra50 = valorHora.valor;
+                if (valorHora.tipo === 'extra_100') valorHoraExtra100 = valorHora.valor;
+              });
+            }
+            
+            pisosProcessed.push({
+              id: cargo.id,
+              cargo: cargo.cargo || "Não especificado",
+              carga_horaria: cargo.carga_horaria,
+              piso_salarial: pisoValor,
+              valor_hora_normal: valorHoraNormal,
+              valor_hora_extra_50: valorHoraExtra50,
+              valor_hora_extra_100: valorHoraExtra100
+            });
+          });
+        }
         
         // Buscar particularidades
         const { data: particularidadesData, error: particularidadesError } = await supabase
           .from('particularidades')
           .select('*')
-          .eq('convenio_id', id);
+          .eq('cargo_id', id);
           
         if (particularidadesError) throw particularidadesError;
-        
-        // Buscar benefícios
-        const { data: beneficiosData, error: beneficiosError } = await supabase
-          .from('beneficios')
-          .select('*')
-          .eq('convenio_id', id);
-          
-        if (beneficiosError) throw beneficiosError;
         
         // Buscar licenças
         const { data: licencasData, error: licencasError } = await supabase
@@ -125,19 +151,53 @@ const ConvencaoDetalhes = () => {
           
         if (licencasError) throw licencasError;
         
+        // Extrair benefícios das particularidades
+        const beneficiosData = particularidadesData?.filter(p => p.categoria === 'benefício') || [];
+        
         // Atualizar estados
         if (convencaoData) {
           setConvencao({
             ...convencaoData,
+            titulo: convencaoData.descricao || "Sem descrição",
             numero: convencaoData.id.substring(0, 8),
-            fonte: "MTE - Sistema Mediador",
-            sindicato: convencaoData.sindicatos
+            tipo: "Convenção Coletiva",
+            fonte: "Base de dados sindical",
+            vigencia_inicio: convencaoData.created_at,
+            vigencia_fim: null,
+            data_base: convencaoData.sindicatos?.data_base || null,
+            estado: null,
+            abrangencia: null,
+            sindicato: convencaoData.sindicatos,
+            assistencia_medica: false,
+            vale_refeicao: null,
+            vale_refeicao_valor: null,
+            seguro_vida: false,
+            uniforme: false,
+            adicional_noturno: null
           });
         }
         
-        setPisosSalariais(pisosData || []);
-        setParticularidades(particularidadesData || []);
-        setBeneficios(beneficiosData || []);
+        setPisosSalariais(pisosProcessed);
+        
+        // Transformar particularidades
+        const partProcessed = (particularidadesData || [])
+          .filter(p => p.categoria !== 'benefício')
+          .map(p => ({
+            id: p.id,
+            descricao: p.conteudo || ""
+          }));
+        
+        setParticularidades(partProcessed);
+        
+        // Transformar benefícios
+        const benProcessed = beneficiosData.map(b => ({
+          id: b.id,
+          tipo: b.categoria || "Benefício",
+          valor: null,
+          descricao: b.conteudo
+        }));
+        
+        setBeneficios(benProcessed);
         setLicencas(licencasData || []);
       } catch (error) {
         console.error("Erro ao buscar dados da convenção:", error);

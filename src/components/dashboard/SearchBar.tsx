@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -33,10 +32,10 @@ export function SearchBar({ onSearch, placeholder = "Buscar convenções, sindic
       // Real search would query the database and fetch results
       const searchTerm = query.toLowerCase();
       
-      // Search in multiple tables
-      const [convencoesResult, sindicatosResult, feedResult] = await Promise.all([
-        supabase.from('convencoes').select('*')
-          .ilike('titulo', `%${searchTerm}%`)
+      // Search in multiple tables with corrected table names
+      const [conveniosResult, sindicatosResult, feedResult] = await Promise.all([
+        supabase.from('convenios').select('*')
+          .ilike('descricao', `%${searchTerm}%`)
           .limit(5),
         supabase.from('sindicatos').select('*')
           .ilike('nome', `%${searchTerm}%`)
@@ -48,7 +47,7 @@ export function SearchBar({ onSearch, placeholder = "Buscar convenções, sindic
       
       // Process results
       const results = {
-        convencoes: convencoesResult.data || [],
+        convencoes: conveniosResult.data || [],
         sindicatos: sindicatosResult.data || [],
         noticias: feedResult.data || []
       };
