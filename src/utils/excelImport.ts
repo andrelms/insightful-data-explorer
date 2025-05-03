@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Types to match our database schema
@@ -28,8 +29,9 @@ interface PisoSalarialImport {
 }
 
 interface ParticularidadeImport {
-  convenio_id: string;
-  descricao: string;
+  cargo_id: string;
+  categoria: string | null;
+  conteudo: string | null;
 }
 
 interface BeneficioImport {
@@ -155,8 +157,8 @@ export async function processExcelData(
             .insert({
               nome: row['SINDICATO'],
               cnpj: row['CNPJ'] || null,
-              estado: row['ESTADO'] || null,
-              site: row['SITE'] || null
+              site: row['SITE'] || null,
+              data_base: row['DATA BASE'] || null
             })
             .select('id')
             .single();
@@ -172,24 +174,12 @@ export async function processExcelData(
         // Create a convention
         const titulo = `CONVENÇÃO COLETIVA ${row['ESTADO'] || ''} - ${row['SINDICATO']}`;
         
+        // Inserir no banco usando a tabela correta: convenios
         const { data: convencaoData, error: convencaoError } = await supabase
-          .from('convencoes')
+          .from('convenios')
           .insert({
-            titulo: titulo,
-            tipo: 'CCT', // Assume all are CCTs
-            estado: row['ESTADO'] || null,
-            data_base: row['DATA BASE'] ? new Date(row['DATA BASE']).toISOString() : null,
-            vigencia_inicio: row['VIGENCIA_INICIO'] ? new Date(row['VIGENCIA_INICIO']).toISOString() : null,
-            vigencia_fim: row['VIGENCIA_FIM'] ? new Date(row['VIGENCIA_FIM']).toISOString() : null,
-            vale_refeicao: row['VALE REFEIÇÃO'] || null,
-            vale_refeicao_valor: row['VALE REFEIÇÃO VALOR'] ? parseFloat(row['VALE REFEIÇÃO VALOR']) : null,
-            assistencia_medica: row['ASSISTENCIA MÉDICA'] === 'SIM' || row['ASSISTENCIA MÉDICA'] === true,
-            seguro_vida: row['SEGURO DE VIDA'] === 'SIM' || row['SEGURO DE VIDA'] === true,
-            uniforme: row['UNIFORME'] === 'SIM' || row['UNIFORME'] === true,
-            adicional_noturno: row['ADICIONAL NOTURNO'] || null,
+            descricao: titulo,
             sindicato_id: sindicatoId,
-            // Armazenar os dados brutos completos para referência futura
-            dados_brutos: row
           })
           .select('id')
           .single();
@@ -221,7 +211,66 @@ export async function processExcelData(
           
         // Process piso salarial if present
         if (row['CARGO'] && (row['PISO SALARIAL'] || row['CARGA HORÁRIA'])) {
-          const pisoData = {
+          // Primeiro criar o cargo
+          const { data: cargoData, error: cargoError } = await supabase
+            .from('cargos')
+            .insert({
+              cargo: row['CARGO'],
+              carga_horaria: row['CARGA HORÁRIA'] || null,
+              convenio_id: convenioId
+            })
+            .select('id')
+            .single();
+
+          if (cargoError) {
+            console.error("Erro ao criar cargo:", cargoError);
+            continue;
+          }
+
+          // Inserir o piso salarial
+          const cargoId = cargoData.id;
+          await supabase
+            .from('piso_salarial')
+            .insert({
+              cargo_id: cargoId,
+              valor: row['PISO SALARIAL'] ? parseFloat(row['PISO SALARIAL']) : null,
+            });
+            
+          // Inserir valores de hora se existirem
+          if (row['VALOR HORA NORMAL'] || row['VALOR HORA EXTRA 50%'] || row['VALOR HORA EXTRA 100%']) {
+            if (row['VALOR HORA NORMAL']) {
+              await supabase
+                .from('valores_hora')
+                .insert({
+                  cargo_id: cargoId,
+                  tipo: 'normal',
+                  valor: parseFloat(row['VALOR HORA NORMAL'])
+                });
+            }
+            
+            if (row['VALOR HORA EXTRA 50%']) {
+              await supabase
+                .from('valores_hora')
+                .insert({
+                  cargo_id: cargoId,
+                  tipo: 'extra_50',
+                  valor: parseFloat(row['VALOR HORA EXTRA 50%'])
+                });
+            }
+            
+            if (row['VALOR HORA EXTRA 100%']) {
+              await supabase
+                .from('valores_hora')
+                .insert({
+                  cargo_id: cargoId,
+                  tipo: 'extra_100',
+                  valor: parseFloat(row['VALOR HORA EXTRA 100%'])
+                });
+            }
+          }
+          
+          // Add to the processed list
+          pisosSalariais.push({
             convenio_id: convenioId,
             cargo: row['CARGO'],
             carga_horaria: row['CARGA HORÁRIA'] || null,
@@ -229,13 +278,7 @@ export async function processExcelData(
             valor_hora_normal: row['VALOR HORA NORMAL'] ? parseFloat(row['VALOR HORA NORMAL']) : null,
             valor_hora_extra_50: row['VALOR HORA EXTRA 50%'] ? parseFloat(row['VALOR HORA EXTRA 50%']) : null,
             valor_hora_extra_100: row['VALOR HORA EXTRA 100%'] ? parseFloat(row['VALOR HORA EXTRA 100%']) : null
-          };
-          
-          await supabase
-            .from('pisos_salariais')
-            .insert(pisoData);
-            
-          pisosSalariais.push(pisoData);
+          });
         }
         
         // Process particularidades if present
@@ -247,16 +290,48 @@ export async function processExcelData(
             .filter((p: string) => p);
             
           for (const particularidade of particularidadesList) {
-            const partData = {
-              convenio_id: convenioId,
-              descricao: particularidade
-            };
+            // Precisamos ter um cargo_id para inserir uma particularidade
+            // Vamos criar um cargo genérico se não tivermos um
+            let cargoId: string;
             
+            if (pisosSalariais.length > 0) {
+              // Use the cargo_id from the latest created piso salarial
+              const { data: cargoData } = await supabase
+                .from('cargos')
+                .select('id')
+                .eq('convenio_id', convenioId)
+                .limit(1);
+                
+              cargoId = cargoData?.[0]?.id;
+            } else {
+              // Create a generic cargo
+              const { data: cargoData } = await supabase
+                .from('cargos')
+                .insert({
+                  cargo: 'Geral',
+                  convenio_id: convenioId
+                })
+                .select('id')
+                .single();
+                
+              cargoId = cargoData.id;
+            }
+            
+            // Now insert the particularidade with the cargo_id
             await supabase
               .from('particularidades')
-              .insert(partData);
-              
-            particularidades.push(partData);
+              .insert({
+                cargo_id: cargoId,
+                conteudo: particularidade,
+                categoria: 'Geral'
+              });
+            
+            // Add to processed list
+            particularidades.push({
+              cargo_id: cargoId,
+              categoria: 'Geral',
+              conteudo: particularidade
+            });
           }
         }
       }

@@ -30,8 +30,9 @@ export interface PisoSalarialImport {
 }
 
 export interface ParticularidadeImport {
-  convenio_id: string;
-  descricao: string;
+  cargo_id: string;
+  categoria: string | null;
+  conteudo: string | null;
 }
 
 export interface BeneficioImport {
