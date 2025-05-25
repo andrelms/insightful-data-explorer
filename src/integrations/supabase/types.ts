@@ -9,28 +9,166 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      anotacoes: {
+        Row: {
+          aba: string | null
+          anotacao: string | null
+          campo_formatado: string | null
+          cargo_id: string | null
+          categoria_particularidade: string | null
+          coluna: string | null
+          convenio_id: string | null
+          created_at: string | null
+          extra_detectado: boolean | null
+          file_id: string | null
+          id: string
+          linha: number | null
+          registro_idx: number | null
+          sugestao_particularidade: string | null
+          updated_at: string | null
+          valido: boolean | null
+          valor_original: string | null
+        }
+        Insert: {
+          aba?: string | null
+          anotacao?: string | null
+          campo_formatado?: string | null
+          cargo_id?: string | null
+          categoria_particularidade?: string | null
+          coluna?: string | null
+          convenio_id?: string | null
+          created_at?: string | null
+          extra_detectado?: boolean | null
+          file_id?: string | null
+          id?: string
+          linha?: number | null
+          registro_idx?: number | null
+          sugestao_particularidade?: string | null
+          updated_at?: string | null
+          valido?: boolean | null
+          valor_original?: string | null
+        }
+        Update: {
+          aba?: string | null
+          anotacao?: string | null
+          campo_formatado?: string | null
+          cargo_id?: string | null
+          categoria_particularidade?: string | null
+          coluna?: string | null
+          convenio_id?: string | null
+          created_at?: string | null
+          extra_detectado?: boolean | null
+          file_id?: string | null
+          id?: string
+          linha?: number | null
+          registro_idx?: number | null
+          sugestao_particularidade?: string | null
+          updated_at?: string | null
+          valido?: boolean | null
+          valor_original?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anotacoes_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anotacoes_convenio_id_fkey"
+            columns: ["convenio_id"]
+            isOneToOne: false
+            referencedRelation: "convenios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anotacoes_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "uploaded_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beneficios_gerais: {
+        Row: {
+          categoria: string | null
+          convenio_id: string | null
+          created_at: string | null
+          descricao: string | null
+          file_id: string | null
+          fonte_coluna: string | null
+          id: string
+          nome: string | null
+          tipo: string | null
+          updated_at: string | null
+          valor: string | null
+        }
+        Insert: {
+          categoria?: string | null
+          convenio_id?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          file_id?: string | null
+          fonte_coluna?: string | null
+          id?: string
+          nome?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+          valor?: string | null
+        }
+        Update: {
+          categoria?: string | null
+          convenio_id?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          file_id?: string | null
+          fonte_coluna?: string | null
+          id?: string
+          nome?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+          valor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beneficios_gerais_convenio_id_fkey"
+            columns: ["convenio_id"]
+            isOneToOne: false
+            referencedRelation: "convenios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cargos: {
         Row: {
           carga_horaria: string | null
           cargo: string | null
+          cbo: string | null
           convenio_id: string | null
           created_at: string | null
+          file_id: string | null
           id: string
           updated_at: string | null
         }
         Insert: {
           carga_horaria?: string | null
           cargo?: string | null
+          cbo?: string | null
           convenio_id?: string | null
           created_at?: string | null
+          file_id?: string | null
           id?: string
           updated_at?: string | null
         }
         Update: {
           carga_horaria?: string | null
           cargo?: string | null
+          cbo?: string | null
           convenio_id?: string | null
           created_at?: string | null
+          file_id?: string | null
           id?: string
           updated_at?: string | null
         }
@@ -40,6 +178,13 @@ export type Database = {
             columns: ["convenio_id"]
             isOneToOne: false
             referencedRelation: "convenios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargos_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "uploaded_files"
             referencedColumns: ["id"]
           },
         ]
@@ -71,26 +216,48 @@ export type Database = {
       convenios: {
         Row: {
           created_at: string | null
+          data_base: string | null
           descricao: string | null
+          file_id: string | null
           id: string
           sindicato_id: string | null
           updated_at: string | null
+          vigencia: string | null
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
         }
         Insert: {
           created_at?: string | null
+          data_base?: string | null
           descricao?: string | null
+          file_id?: string | null
           id?: string
           sindicato_id?: string | null
           updated_at?: string | null
+          vigencia?: string | null
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
         }
         Update: {
           created_at?: string | null
+          data_base?: string | null
           descricao?: string | null
+          file_id?: string | null
           id?: string
           sindicato_id?: string | null
           updated_at?: string | null
+          vigencia?: string | null
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "convenios_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "uploaded_files"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "convenios_sindicato_id_fkey"
             columns: ["sindicato_id"]
@@ -163,59 +330,44 @@ export type Database = {
         }
         Relationships: []
       }
-      licencas: {
-        Row: {
-          convenio_id: string
-          created_at: string | null
-          descricao: string | null
-          dias: number | null
-          id: string
-          tipo: string
-          updated_at: string | null
-        }
-        Insert: {
-          convenio_id: string
-          created_at?: string | null
-          descricao?: string | null
-          dias?: number | null
-          id?: string
-          tipo: string
-          updated_at?: string | null
-        }
-        Update: {
-          convenio_id?: string
-          created_at?: string | null
-          descricao?: string | null
-          dias?: number | null
-          id?: string
-          tipo?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       particularidades: {
         Row: {
           cargo_id: string | null
           categoria: string | null
           conteudo: string | null
+          convenio_id: string | null
           created_at: string | null
+          descricao: string | null
+          detalhe: string | null
+          file_id: string | null
           id: string
+          licenca_id: string | null
           updated_at: string | null
         }
         Insert: {
           cargo_id?: string | null
           categoria?: string | null
           conteudo?: string | null
+          convenio_id?: string | null
           created_at?: string | null
+          descricao?: string | null
+          detalhe?: string | null
+          file_id?: string | null
           id?: string
+          licenca_id?: string | null
           updated_at?: string | null
         }
         Update: {
           cargo_id?: string | null
           categoria?: string | null
           conteudo?: string | null
+          convenio_id?: string | null
           created_at?: string | null
+          descricao?: string | null
+          detalhe?: string | null
+          file_id?: string | null
           id?: string
+          licenca_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -226,6 +378,13 @@ export type Database = {
             referencedRelation: "cargos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "particularidades_convenio_id_fkey"
+            columns: ["convenio_id"]
+            isOneToOne: false
+            referencedRelation: "convenios"
+            referencedColumns: ["id"]
+          },
         ]
       }
       piso_salarial: {
@@ -233,6 +392,7 @@ export type Database = {
           cargo_id: string | null
           created_at: string | null
           descricao: string | null
+          file_id: string | null
           id: string
           updated_at: string | null
           valor: number | null
@@ -241,6 +401,7 @@ export type Database = {
           cargo_id?: string | null
           created_at?: string | null
           descricao?: string | null
+          file_id?: string | null
           id?: string
           updated_at?: string | null
           valor?: number | null
@@ -249,6 +410,7 @@ export type Database = {
           cargo_id?: string | null
           created_at?: string | null
           descricao?: string | null
+          file_id?: string | null
           id?: string
           updated_at?: string | null
           valor?: number | null
@@ -306,6 +468,8 @@ export type Database = {
           cnpj: string | null
           created_at: string | null
           data_base: string | null
+          estado: string | null
+          file_id: string | null
           id: string
           nome: string
           site: string | null
@@ -315,6 +479,8 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           data_base?: string | null
+          estado?: string | null
+          file_id?: string | null
           id?: string
           nome: string
           site?: string | null
@@ -324,12 +490,22 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           data_base?: string | null
+          estado?: string | null
+          file_id?: string | null
           id?: string
           nome?: string
           site?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sindicatos_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "uploaded_files"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_logs: {
         Row: {
@@ -363,6 +539,7 @@ export type Database = {
       }
       uploaded_files: {
         Row: {
+          file_hash: string | null
           file_path: string | null
           file_size: number
           file_type: string
@@ -370,9 +547,11 @@ export type Database = {
           id: string
           processed: boolean | null
           processed_at: string | null
+          raw_json: string | null
           uploaded_at: string
         }
         Insert: {
+          file_hash?: string | null
           file_path?: string | null
           file_size: number
           file_type: string
@@ -380,9 +559,11 @@ export type Database = {
           id?: string
           processed?: boolean | null
           processed_at?: string | null
+          raw_json?: string | null
           uploaded_at?: string
         }
         Update: {
+          file_hash?: string | null
           file_path?: string | null
           file_size?: number
           file_type?: string
@@ -390,6 +571,7 @@ export type Database = {
           id?: string
           processed?: boolean | null
           processed_at?: string | null
+          raw_json?: string | null
           uploaded_at?: string
         }
         Relationships: []
@@ -399,6 +581,8 @@ export type Database = {
           cargo_id: string | null
           created_at: string | null
           descricao: string | null
+          file_id: string | null
+          fonte_coluna: string | null
           id: string
           tipo: string | null
           updated_at: string | null
@@ -408,6 +592,8 @@ export type Database = {
           cargo_id?: string | null
           created_at?: string | null
           descricao?: string | null
+          file_id?: string | null
+          fonte_coluna?: string | null
           id?: string
           tipo?: string | null
           updated_at?: string | null
@@ -417,6 +603,8 @@ export type Database = {
           cargo_id?: string | null
           created_at?: string | null
           descricao?: string | null
+          file_id?: string | null
+          fonte_coluna?: string | null
           id?: string
           tipo?: string | null
           updated_at?: string | null

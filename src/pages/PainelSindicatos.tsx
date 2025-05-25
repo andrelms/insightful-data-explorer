@@ -19,109 +19,50 @@ const siglas_estados: {[key: string]: string} = {
   'SE': 'Sergipe', 'TO': 'Tocantins'
 };
 
-// Dados reais estruturados a partir das informações de sindicatos
-interface SindicatoInfo {
+interface SindicatoData {
+  id: string;
   nome: string;
-  cnpj: string;
-  infoPrincipais: {
-    cargo: string;
-    cbo?: string;
-    cargaHoraria: string;
-    pisoSalarial: string;
-  }[];
-  outrasInfos: {
-    nome: string;
-    valor: string;
-  }[];
-  valoresHoraExtra?: {
-    dia: string;
-    percentual: string;
-    valor: string;
-  }[];
+  cnpj: string | null;
+  site: string | null;
+  data_base: string | null;
+  estado: string | null;
+  cargos: CargoData[];
+  beneficios: BeneficioData[];
+  particularidades: ParticularidadeData[];
+}
+
+interface CargoData {
+  id: string;
+  cargo: string;
+  carga_horaria: string | null;
+  cbo: string | null;
+  piso_salarial: number | null;
+  valores_hora: ValorHoraData[];
+}
+
+interface ValorHoraData {
+  tipo: string;
+  valor: number;
+  descricao: string | null;
+}
+
+interface BeneficioData {
+  tipo: string;
+  nome: string;
+  valor: string | null;
+  descricao: string | null;
+}
+
+interface ParticularidadeData {
+  categoria: string | null;
+  conteudo: string | null;
 }
 
 interface EstadoSindicatos {
   sigla: string;
-  sindicatos: SindicatoInfo[];
+  nome: string;
+  sindicatos: SindicatoData[];
 }
-
-// Dados a partir das informações em custom instructions
-const sindicatosPorEstado: EstadoSindicatos[] = [
-  {
-    sigla: 'AL',
-    sindicatos: [
-      {
-        nome: 'SINDPD AL',
-        cnpj: '69.982.155/0001-77',
-        infoPrincipais: [
-          { cargo: 'ANALISTA DE INFORMATICA NIVEL I', cargaHoraria: '44h', pisoSalarial: 'R$ 8696,50' },
-          { cargo: 'ANALISTA DE INFORMATICA NIVEL II', cargaHoraria: '44h', pisoSalarial: 'R$ 6630,50' },
-          { cargo: 'TECNICO EM APLICATIVO E DESENVOLVIMENTO DE SISTEMAS I', cargaHoraria: '44h', pisoSalarial: 'R$ 5484,00' },
-          { cargo: 'TECNICO EM APLICATIVO E DESENVOLVIMENTO DE SISTEMAS II', cargaHoraria: '44h', pisoSalarial: 'R$ 4295,50' },
-          { cargo: 'TECNICO EM INFORMATICA - 8 HORAS', cargaHoraria: '44h', pisoSalarial: 'R$ 4214,25' },
-          { cargo: 'TECNICO EM INFORMATICA - 6 HORAS', cargaHoraria: '36h', pisoSalarial: 'R$ 3167,00' },
-          { cargo: 'ASSISTENTE DE INFORMATICA', cargaHoraria: '36h', pisoSalarial: 'R$ 2036,00' },
-          { cargo: 'PISO NORMATIVO/ JORNADA DE 8 HORAS DIÁRIAS', cargaHoraria: '44h', pisoSalarial: 'R$ 2314,00' },
-          { cargo: 'PISO NORMATIVO/ JORNADA DE 6 HORAS DIÁRIAS', cargaHoraria: '36h', pisoSalarial: 'R$ 1736,00' }
-        ],
-        outrasInfos: [
-          { nome: 'DATA BASE', valor: '01 JULHO' },
-          { nome: 'SITE', valor: 'www.sindpdal.org.br' },
-          { nome: 'VALE REFEIÇÃO', valor: 'VA/VR R$26,75 (FIXO 22 DIAS)' },
-          { nome: 'PARTICULARIDADE', valor: 'HORAS EXTRAS 60% (SEG-SAB), 100% (DOM/FER)' }
-        ]
-      }
-    ]
-  },
-  {
-    sigla: 'SP',
-    sindicatos: [
-      {
-        nome: 'SINDPD SP',
-        cnpj: '00.000.000/0001-00',
-        infoPrincipais: [
-          { cargo: 'DIGITADOR', cargaHoraria: '30H SEMANAIS', pisoSalarial: 'R$ 2025,00' },
-          { cargo: 'ATIVIDADES ADMINISTRATIVAS', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 1615,00' },
-          { cargo: 'ATIVIDADE TÉCNICA INFORMATICA', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 2245,00' },
-          { cargo: 'TÉCNICO DE SUPORTE', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 2245,00' }
-        ],
-        outrasInfos: [
-          { nome: 'DATA BASE', valor: '01 JANEIRO 2024' },
-          { nome: 'SITE', valor: 'www.sindpd.org.br' },
-          { nome: 'VALE REFEIÇÃO', valor: 'VR R$ 28,00 PARA 08 HORAS (FIXO 22 DIAS MÊS) = R$ 616,00' }
-        ],
-        valoresHoraExtra: [
-          { dia: 'DIAS ÚTEIS (PRIMEIRAS 2 HORAS)', percentual: '75%', valor: 'R$ 23,63' },
-          { dia: 'DIAS ÚTEIS (APÓS 2 HORAS)', percentual: '100%', valor: 'R$ 27,00' },
-          { dia: 'FINAL DE SEMANA E FERIADO', percentual: '100%', valor: 'R$ 27,00' }
-        ]
-      }
-    ]
-  },
-  {
-    sigla: 'RJ',
-    sindicatos: [
-      {
-        nome: 'SINDPD RJ',
-        cnpj: '00.000.000/0001-00',
-        infoPrincipais: [
-          { cargo: 'ASSISTENTE/AUXILIAR ADMINISTRATIVO', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 1540,00' },
-          { cargo: 'SECRETÁRIA', cargaHoraria: '40H SEMANAIS', pisoSalarial: 'R$ 1540,00' },
-          { cargo: 'DIGITADOR, DIGITADOR DE TERMINAL', cargaHoraria: '30H SEMANAIS', pisoSalarial: 'R$ 1699,38' }
-        ],
-        outrasInfos: [
-          { nome: 'DATA BASE', valor: '01 SETEMBRO 2023' },
-          { nome: 'SITE', valor: 'http://sindpdrj.org.br/' },
-          { nome: 'VALE REFEIÇÃO', valor: 'VR R$ 35,00 P/8h (FIXO 21 DIAS) = 735,00' }
-        ],
-        valoresHoraExtra: [
-          { dia: 'DIAS NORMAIS', percentual: '50%', valor: 'R$ 11,55' },
-          { dia: 'FINAL DE SEMANA E FERIADO', percentual: '100%', valor: 'R$ 15,40' }
-        ]
-      }
-    ]
-  }
-];
 
 const PainelSindicatos = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -132,11 +73,165 @@ const PainelSindicatos = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Para o propósito deste exemplo, vamos usar os dados estruturados
-    // Em uma implementação real, buscaríamos do Supabase
-    setDados(sindicatosPorEstado);
-    setLoading(false);
+    fetchDadosSupabase();
   }, []);
+
+  const fetchDadosSupabase = async () => {
+    setLoading(true);
+    try {
+      // Buscar sindicatos com convenios, cargos e dados relacionados
+      const { data: sindicatos, error: sindicatosError } = await supabase
+        .from('sindicatos')
+        .select(`
+          id,
+          nome,
+          cnpj,
+          site,
+          data_base,
+          estado
+        `);
+
+      if (sindicatosError) {
+        console.error('Erro ao buscar sindicatos:', sindicatosError);
+        return;
+      }
+
+      if (!sindicatos || sindicatos.length === 0) {
+        setDados([]);
+        setLoading(false);
+        return;
+      }
+
+      // Para cada sindicato, buscar seus convenios e dados relacionados
+      const sindicatosCompletos: SindicatoData[] = [];
+
+      for (const sindicato of sindicatos) {
+        // Buscar convenios do sindicato
+        const { data: convenios } = await supabase
+          .from('convenios')
+          .select('id')
+          .eq('sindicato_id', sindicato.id);
+
+        if (!convenios || convenios.length === 0) {
+          // Adicionar sindicato mesmo sem convenios
+          sindicatosCompletos.push({
+            ...sindicato,
+            cargos: [],
+            beneficios: [],
+            particularidades: []
+          });
+          continue;
+        }
+
+        const convenioIds = convenios.map(c => c.id);
+
+        // Buscar cargos dos convenios
+        const { data: cargos } = await supabase
+          .from('cargos')
+          .select(`
+            id,
+            cargo,
+            carga_horaria,
+            cbo
+          `)
+          .in('convenio_id', convenioIds);
+
+        // Buscar beneficios gerais dos convenios
+        const { data: beneficios } = await supabase
+          .from('beneficios_gerais')
+          .select(`
+            tipo,
+            nome,
+            valor,
+            descricao
+          `)
+          .in('convenio_id', convenioIds);
+
+        // Buscar particularidades
+        const { data: particularidades } = await supabase
+          .from('particularidades')
+          .select(`
+            categoria,
+            conteudo
+          `)
+          .in('convenio_id', convenioIds);
+
+        // Para cada cargo, buscar piso salarial e valores de hora
+        const cargosCompletos: CargoData[] = [];
+        
+        if (cargos) {
+          for (const cargo of cargos) {
+            const { data: pisoSalarial } = await supabase
+              .from('piso_salarial')
+              .select('valor')
+              .eq('cargo_id', cargo.id)
+              .maybeSingle();
+
+            const { data: valoresHora } = await supabase
+              .from('valores_hora')
+              .select(`
+                tipo,
+                valor,
+                descricao
+              `)
+              .eq('cargo_id', cargo.id);
+
+            cargosCompletos.push({
+              ...cargo,
+              piso_salarial: pisoSalarial?.valor || null,
+              valores_hora: valoresHora || []
+            });
+          }
+        }
+
+        // Extrair estado do sindicato (pode estar na data_base ou no nome)
+        let estadoSigla = sindicato.estado;
+        if (!estadoSigla && sindicato.data_base) {
+          const match = sindicato.data_base.match(/([A-Z]{2})/);
+          estadoSigla = match ? match[1] : null;
+        }
+        if (!estadoSigla && sindicato.nome) {
+          const match = sindicato.nome.match(/([A-Z]{2})/);
+          estadoSigla = match ? match[1] : null;
+        }
+
+        sindicatosCompletos.push({
+          ...sindicato,
+          estado: estadoSigla,
+          cargos: cargosCompletos,
+          beneficios: beneficios || [],
+          particularidades: particularidades || []
+        });
+      }
+
+      // Agrupar sindicatos por estado
+      const estadosMap: {[key: string]: SindicatoData[]} = {};
+      
+      sindicatosCompletos.forEach(sindicato => {
+        const estado = sindicato.estado || 'OUTROS';
+        if (!estadosMap[estado]) {
+          estadosMap[estado] = [];
+        }
+        estadosMap[estado].push(sindicato);
+      });
+
+      // Converter para array de EstadoSindicatos
+      const estadosArray: EstadoSindicatos[] = Object.entries(estadosMap).map(([sigla, sindicatos]) => ({
+        sigla,
+        nome: siglas_estados[sigla] || sigla,
+        sindicatos
+      }));
+
+      // Ordenar por nome do estado
+      estadosArray.sort((a, b) => a.nome.localeCompare(b.nome));
+
+      setDados(estadosArray);
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter and search logic
   const filteredEstados = dados.filter(estado => {
@@ -146,11 +241,12 @@ const PainelSindicatos = () => {
     // Search term logic
     if (searchTerm) {
       const termLower = searchTerm.toLowerCase();
-      const estadoMatches = siglas_estados[estado.sigla]?.toLowerCase().includes(termLower);
+      const estadoMatches = estado.nome.toLowerCase().includes(termLower);
       const sindicatoMatches = estado.sindicatos.some(sind => 
         sind.nome.toLowerCase().includes(termLower) || 
-        sind.infoPrincipais.some(info => 
-          Object.values(info).some(val => val.toString().toLowerCase().includes(termLower))
+        sind.cargos.some(cargo => 
+          cargo.cargo.toLowerCase().includes(termLower) ||
+          cargo.carga_horaria?.toLowerCase().includes(termLower)
         )
       );
       
@@ -166,6 +262,14 @@ const PainelSindicatos = () => {
       ...prev,
       [key]: !prev[key]
     }));
+  };
+
+  const formatCurrency = (value: number | null) => {
+    if (!value) return 'N/A';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
   };
   
   return (
@@ -226,18 +330,18 @@ const PainelSindicatos = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredEstados.map((estado) => (
             <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
-              <Card className="overflow-hidden hover-scale">
+              <Card className="overflow-hidden hover-scale h-full">
                 <div className="bg-gradient-to-r from-blue-600 to-violet-600 text-white p-4">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
-                    <h2 className="text-xl font-bold">{siglas_estados[estado.sigla]}</h2>
+                    <h2 className="text-xl font-bold">{estado.nome}</h2>
                   </div>
                   <div className="text-sm opacity-80 mt-1">
                     {estado.sindicatos.length} Sindicato{estado.sindicatos.length !== 1 ? 's' : ''}
                   </div>
                 </div>
                 
-                <CardContent className="p-0">
+                <CardContent className="p-0 flex-1">
                   {estado.sindicatos.map((sindicato, sindIdx) => {
                     const isExpanded = expandedSindicatos[`${estado.sigla}-${sindIdx}`];
                     
@@ -256,29 +360,57 @@ const PainelSindicatos = () => {
                         
                         {isExpanded && (
                           <div className="p-4 pt-0 space-y-4 text-sm">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                              <Info className="h-3 w-3" />
-                              <span>CNPJ: {sindicato.cnpj}</span>
-                            </div>
+                            {sindicato.cnpj && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                                <Info className="h-3 w-3" />
+                                <span>CNPJ: {sindicato.cnpj}</span>
+                              </div>
+                            )}
                             
-                            {sindicato.infoPrincipais && sindicato.infoPrincipais.length > 0 && (
+                            {/* Informações do Sindicato */}
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-xs text-accent-foreground">Informações do Sindicato</h4>
+                              <div className="grid grid-cols-2 gap-2">
+                                {sindicato.site && (
+                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                    <div className="text-xs font-medium">Site</div>
+                                    <div className="truncate">{sindicato.site}</div>
+                                  </div>
+                                )}
+                                {sindicato.data_base && (
+                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                    <div className="text-xs font-medium">Data Base</div>
+                                    <div>{sindicato.data_base}</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Cargos e Pisos Salariais */}
+                            {sindicato.cargos && sindicato.cargos.length > 0 && (
                               <div className="space-y-2">
-                                <h4 className="font-medium text-xs text-accent-foreground">Informações Principais</h4>
+                                <h4 className="font-medium text-xs text-accent-foreground">Cargos e Pisos Salariais</h4>
                                 <div className="overflow-x-auto">
                                   <table className="w-full min-w-[400px] border-collapse text-left">
                                     <thead>
                                       <tr>
-                                        {Object.keys(sindicato.infoPrincipais[0]).filter(k => k !== 'cbo' || sindicato.infoPrincipais[0].cbo).map(key => (
-                                          <th key={key} className="p-2 border bg-muted text-xs uppercase">{key}</th>
-                                        ))}
+                                        <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Carga Horária</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
+                                        {sindicato.cargos[0]?.cbo && (
+                                          <th className="p-2 border bg-muted text-xs uppercase">CBO</th>
+                                        )}
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {sindicato.infoPrincipais.map((info, i) => (
+                                      {sindicato.cargos.map((cargo, i) => (
                                         <tr key={i} className="even:bg-muted/30">
-                                          {Object.entries(info).filter(([k]) => k !== 'cbo' || info.cbo).map(([key, value], j) => (
-                                            <td key={j} className="p-2 border">{String(value)}</td>
-                                          ))}
+                                          <td className="p-2 border">{cargo.cargo}</td>
+                                          <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
+                                          <td className="p-2 border">{formatCurrency(cargo.piso_salarial)}</td>
+                                          {cargo.cbo && (
+                                            <td className="p-2 border">{cargo.cbo}</td>
+                                          )}
                                         </tr>
                                       ))}
                                     </tbody>
@@ -286,43 +418,64 @@ const PainelSindicatos = () => {
                                 </div>
                               </div>
                             )}
-                            
-                            {sindicato.outrasInfos && sindicato.outrasInfos.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="font-medium text-xs text-accent-foreground">Outras Informações</h4>
-                                <div className="grid grid-cols-2 gap-2">
-                                  {sindicato.outrasInfos.map((info, i) => (
-                                    <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-primary">
-                                      <div className="text-xs font-medium">{info.nome}</div>
-                                      <div>{info.valor}</div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            
-                            {sindicato.valoresHoraExtra && sindicato.valoresHoraExtra.length > 0 && (
+
+                            {/* Valores Hora Extra */}
+                            {sindicato.cargos.some(c => c.valores_hora.length > 0) && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Valores Hora Extra</h4>
                                 <div className="overflow-x-auto">
                                   <table className="w-full border-collapse text-left">
                                     <thead>
                                       <tr>
-                                        {Object.keys(sindicato.valoresHoraExtra[0]).map(key => (
-                                          <th key={key} className="p-2 border bg-muted text-xs uppercase">{key}</th>
-                                        ))}
+                                        <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Tipo</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {sindicato.valoresHoraExtra.map((valor, i) => (
-                                        <tr key={i} className="even:bg-muted/30">
-                                          {Object.values(valor).map((v, j) => (
-                                            <td key={j} className="p-2 border">{String(v)}</td>
-                                          ))}
-                                        </tr>
-                                      ))}
+                                      {sindicato.cargos.map((cargo) => 
+                                        cargo.valores_hora.map((valor, i) => (
+                                          <tr key={`${cargo.id}-${i}`} className="even:bg-muted/30">
+                                            <td className="p-2 border">{cargo.cargo}</td>
+                                            <td className="p-2 border">{valor.tipo}</td>
+                                            <td className="p-2 border">{formatCurrency(valor.valor)}</td>
+                                          </tr>
+                                        ))
+                                      )}
                                     </tbody>
                                   </table>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Benefícios */}
+                            {sindicato.beneficios && sindicato.beneficios.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {sindicato.beneficios.map((beneficio, i) => (
+                                    <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-green-500">
+                                      <div className="text-xs font-medium">{beneficio.nome}</div>
+                                      <div>{beneficio.valor || beneficio.descricao || '-'}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Particularidades */}
+                            {sindicato.particularidades && sindicato.particularidades.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Particularidades</h4>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {sindicato.particularidades.map((part, i) => (
+                                    <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-orange-500">
+                                      {part.categoria && (
+                                        <div className="text-xs font-medium">{part.categoria}</div>
+                                      )}
+                                      <div className="text-xs">{part.conteudo}</div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
