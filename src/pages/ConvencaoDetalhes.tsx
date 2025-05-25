@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -55,13 +56,6 @@ interface Beneficio {
   descricao: string | null;
 }
 
-interface Licenca {
-  id: string;
-  tipo: string;
-  dias: number | null;
-  descricao: string | null;
-}
-
 const ConvencaoDetalhes = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -69,7 +63,6 @@ const ConvencaoDetalhes = () => {
   const [pisosSalariais, setPisosSalariais] = useState<PisoSalarial[]>([]);
   const [particularidades, setParticularidades] = useState<Particularidade[]>([]);
   const [beneficios, setBeneficios] = useState<Beneficio[]>([]);
-  const [licencas, setLicencas] = useState<Licenca[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -139,17 +132,9 @@ const ConvencaoDetalhes = () => {
         const { data: particularidadesData, error: particularidadesError } = await supabase
           .from('particularidades')
           .select('*')
-          .eq('cargo_id', id);
-          
-        if (particularidadesError) throw particularidadesError;
-        
-        // Buscar licenças
-        const { data: licencasData, error: licencasError } = await supabase
-          .from('licencas')
-          .select('*')
           .eq('convenio_id', id);
           
-        if (licencasError) throw licencasError;
+        if (particularidadesError) throw particularidadesError;
         
         // Extrair benefícios das particularidades
         const beneficiosData = particularidadesData?.filter(p => p.categoria === 'benefício') || [];
@@ -198,7 +183,6 @@ const ConvencaoDetalhes = () => {
         }));
         
         setBeneficios(benProcessed);
-        setLicencas(licencasData || []);
       } catch (error) {
         console.error("Erro ao buscar dados da convenção:", error);
       } finally {
@@ -416,25 +400,6 @@ const ConvencaoDetalhes = () => {
               )}
             </CardContent>
           </Card>
-          
-          {/* Licenças */}
-          {licencas.length > 0 && (
-            <Card className="mb-4">
-              <CardHeader>
-                <CardTitle className="text-base">Licenças</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DashboardTable 
-                  columns={["Tipo", "Dias", "Descrição"]}
-                  data={licencas.map(licenca => ({
-                    "Tipo": licenca.tipo,
-                    "Dias": licenca.dias ? licenca.dias.toString() : "-",
-                    "Descrição": licenca.descricao || "-"
-                  }))}
-                />
-              </CardContent>
-            </Card>
-          )}
           
           {/* Particularidades */}
           {particularidades.length > 0 && (
