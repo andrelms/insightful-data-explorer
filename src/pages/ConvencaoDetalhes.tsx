@@ -53,7 +53,6 @@ const ConvencaoDetalhes = () => {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Coluna lateral */}
         <div className="space-y-4">
           <ConvencaoDetalhesInfoCard
             vigenciaInicio={convencao.vigencia_inicio}
@@ -70,7 +69,6 @@ const ConvencaoDetalhes = () => {
           />
         </div>
         
-        {/* Conteúdo principal */}
         <div className="col-span-1 md:col-span-2">
           <ConvencaoDetalhesPisosCard pisosSalariais={pisosSalariais} />
           
