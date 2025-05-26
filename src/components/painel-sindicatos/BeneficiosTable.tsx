@@ -8,7 +8,7 @@ interface BeneficiosTableProps {
 export const BeneficiosTable = ({ beneficios }: BeneficiosTableProps) => {
   // Filtrar benefícios para remover o tipo 'site'
   const beneficiosFiltrados = beneficios.filter(beneficio => 
-    beneficio.tipo !== 'site'
+    beneficio.tipo !== 'site' && beneficio.nome !== 'site'
   );
 
   if (beneficiosFiltrados.length === 0) {

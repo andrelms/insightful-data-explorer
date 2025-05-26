@@ -78,7 +78,8 @@ export const useSindicatosData = () => {
             descricao
           `)
           .in('convenio_id', convenioIds)
-          .neq('tipo', 'site'); // Excluir tipo 'site'
+          .neq('tipo', 'site')
+          .neq('nome', 'site'); // Filtrar tanto tipo quanto nome
 
         // Buscar particularidades
         const { data: particularidades } = await supabase

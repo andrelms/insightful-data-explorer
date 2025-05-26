@@ -36,7 +36,9 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
             <tr>
               <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
               <th className="p-2 border bg-muted text-xs uppercase">Carga Horária</th>
-              <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
+              {descricoesUnicas.length === 0 && (
+                <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
+              )}
               {descricoesUnicas.map(desc => (
                 <th key={desc} className="p-2 border bg-muted text-xs uppercase">{desc}</th>
               ))}
@@ -50,9 +52,11 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
               <tr key={i} className="even:bg-muted/30">
                 <td className="p-2 border">{cargo.cargo}</td>
                 <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
-                <td className="p-2 border">
-                  {!cargo.piso_descricao ? formatCurrency(cargo.piso_salarial) : '-'}
-                </td>
+                {descricoesUnicas.length === 0 && (
+                  <td className="p-2 border">
+                    {formatCurrency(cargo.piso_salarial)}
+                  </td>
+                )}
                 {descricoesUnicas.map(desc => (
                   <td key={desc} className="p-2 border">
                     {cargo.piso_descricao === desc ? formatCurrency(cargo.piso_salarial) : '-'}

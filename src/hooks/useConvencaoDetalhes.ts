@@ -32,6 +32,7 @@ interface PisoSalarial {
   cargo: string;
   carga_horaria: string | null;
   piso_salarial: number | null;
+  piso_descricao?: string | null;
   valor_hora_normal: number | null;
   valor_hora_extra_50: number | null;
   valor_hora_extra_100: number | null;
@@ -39,7 +40,9 @@ interface PisoSalarial {
 
 interface Particularidade {
   id: string;
-  descricao: string;
+  categoria?: string;
+  conteudo?: string;
+  descricao?: string;
 }
 
 interface Beneficio {
@@ -74,13 +77,11 @@ export function useConvencaoDetalhes(id: string | undefined) {
           
         if (convencaoError) throw convencaoError;
         
-        // Buscar pisos salariais associados aos cargos dessa convênio
+        // Buscar TODOS os cargos dessa convenção
         const { data: cargosData, error: cargosError } = await supabase
           .from('cargos')
           .select(`
-            id, cargo, carga_horaria,
-            piso_salarial (valor, descricao),
-            valores_hora (tipo, valor)
+            id, cargo, carga_horaria
           `)
           .eq('convenio_id', id);
 
@@ -89,18 +90,27 @@ export function useConvencaoDetalhes(id: string | undefined) {
         // Transformar dados de cargos em pisos salariais
         const pisosProcessed: PisoSalarial[] = [];
         if (cargosData) {
-          cargosData.forEach(cargo => {
-            const pisoValor = cargo.piso_salarial && cargo.piso_salarial.length > 0 
-              ? cargo.piso_salarial[0].valor 
-              : null;
+          for (const cargo of cargosData) {
+            // Buscar piso salarial para cada cargo
+            const { data: pisoData } = await supabase
+              .from('piso_salarial')
+              .select('valor, descricao')
+              .eq('cargo_id', cargo.id)
+              .maybeSingle();
               
+            // Buscar valores de hora para cada cargo
+            const { data: valoresHora } = await supabase
+              .from('valores_hora')
+              .select('tipo, valor')
+              .eq('cargo_id', cargo.id);
+            
             // Processar valores de hora (normal, 50%, 100%)
             let valorHoraNormal = null;
             let valorHoraExtra50 = null;
             let valorHoraExtra100 = null;
             
-            if (cargo.valores_hora && Array.isArray(cargo.valores_hora)) {
-              cargo.valores_hora.forEach(valorHora => {
+            if (valoresHora && Array.isArray(valoresHora)) {
+              valoresHora.forEach(valorHora => {
                 if (valorHora.tipo === 'normal') valorHoraNormal = valorHora.valor;
                 if (valorHora.tipo === 'extra_50') valorHoraExtra50 = valorHora.valor;
                 if (valorHora.tipo === 'extra_100') valorHoraExtra100 = valorHora.valor;
@@ -111,12 +121,13 @@ export function useConvencaoDetalhes(id: string | undefined) {
               id: cargo.id,
               cargo: cargo.cargo || "Não especificado",
               carga_horaria: cargo.carga_horaria,
-              piso_salarial: pisoValor,
+              piso_salarial: pisoData?.valor || null,
+              piso_descricao: pisoData?.descricao || null,
               valor_hora_normal: valorHoraNormal,
               valor_hora_extra_50: valorHoraExtra50,
               valor_hora_extra_100: valorHoraExtra100
             });
-          });
+          }
         }
         
         // Buscar particularidades
@@ -127,8 +138,15 @@ export function useConvencaoDetalhes(id: string | undefined) {
           
         if (particularidadesError) throw particularidadesError;
         
-        // Extrair benefícios das particularidades
-        const beneficiosData = particularidadesData?.filter(p => p.categoria === 'benefício') || [];
+        // Buscar benefícios gerais (excluindo 'site')
+        const { data: beneficiosData, error: beneficiosError } = await supabase
+          .from('beneficios_gerais')
+          .select('*')
+          .eq('convenio_id', id)
+          .neq('tipo', 'site')
+          .neq('nome', 'site');
+          
+        if (beneficiosError) throw beneficiosError;
         
         // Atualizar estados
         if (convencaoData) {
@@ -160,17 +178,19 @@ export function useConvencaoDetalhes(id: string | undefined) {
           .filter(p => p.categoria !== 'benefício')
           .map(p => ({
             id: p.id,
+            categoria: p.categoria,
+            conteudo: p.conteudo,
             descricao: p.conteudo || ""
           }));
         
         setParticularidades(partProcessed);
         
         // Transformar benefícios
-        const benProcessed = beneficiosData.map(b => ({
+        const benProcessed = (beneficiosData || []).map(b => ({
           id: b.id,
-          tipo: b.categoria || "Benefício",
-          valor: null,
-          descricao: b.conteudo
+          tipo: b.tipo || "Benefício",
+          valor: b.valor,
+          descricao: b.descricao
         }));
         
         setBeneficios(benProcessed);
