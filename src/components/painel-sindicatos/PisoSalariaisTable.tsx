@@ -40,7 +40,7 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
               {descricoesUnicas.map(desc => (
                 <th key={desc} className="p-2 border bg-muted text-xs uppercase">{desc}</th>
               ))}
-              {cargos[0]?.cbo && (
+              {cargos.some(cargo => cargo.cbo) && (
                 <th className="p-2 border bg-muted text-xs uppercase">CBO</th>
               )}
             </tr>
@@ -58,8 +58,8 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
                     {cargo.piso_descricao === desc ? formatCurrency(cargo.piso_salarial) : '-'}
                   </td>
                 ))}
-                {cargo.cbo && (
-                  <td className="p-2 border">{cargo.cbo}</td>
+                {cargos.some(cargo => cargo.cbo) && (
+                  <td className="p-2 border">{cargo.cbo || '-'}</td>
                 )}
               </tr>
             ))}

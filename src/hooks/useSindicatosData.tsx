@@ -57,7 +57,7 @@ export const useSindicatosData = () => {
 
         const convenioIds = convenios.map(c => c.id);
 
-        // Buscar cargos dos convenios (incluindo duplicados)
+        // Buscar TODOS os cargos dos convenios (incluindo duplicados)
         const { data: cargos } = await supabase
           .from('cargos')
           .select(`
