@@ -1,3 +1,4 @@
+
 import { read } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -92,7 +93,7 @@ export const importExcelData = async (file: File) => {
               site: sindicatoSite,
               data_base: sindicatoDataBase,
               estado: sindicatoEstado,
-              file_id: uploadedFile.id
+              file_id: uploadedFileId
             }
           ])
           .select()
@@ -114,7 +115,7 @@ export const importExcelData = async (file: File) => {
         {
           sindicato_id: sindicato?.id || null,
           descricao: 'Importação via Excel',
-          file_id: uploadedFile.id
+          file_id: uploadedFileId
         }
       ])
       .select()
@@ -146,7 +147,7 @@ export const importExcelData = async (file: File) => {
         cargo: cargo.cargo,
         carga_horaria: cargo.carga_horaria,
         cbo: cargo.cbo,
-        file_id: uploadedFile.id
+        file_id: uploadedFileId
       }));
 
       const { error: cargosError } = await supabase
@@ -201,9 +202,9 @@ export const importExcelData = async (file: File) => {
         .insert(
           pisosSalariaisComCargoId.map(piso => ({
             cargo_id: piso.cargo_id,
-            valor: piso.valor,
+            valor: piso.valor ? parseFloat(piso.valor) : null,
             descricao: piso.descricao,
-            file_id: uploadedFile.id
+            file_id: uploadedFileId
           }))
         );
 
@@ -256,8 +257,8 @@ export const importExcelData = async (file: File) => {
           valoresHoraComCargoId.map(valorHora => ({
             cargo_id: valorHora.cargo_id,
             tipo: valorHora.tipo,
-            valor: valorHora.valor,
-            file_id: uploadedFile.id
+            valor: valorHora.valor ? parseFloat(valorHora.valor) : null,
+            file_id: uploadedFileId
           }))
         );
 
@@ -288,7 +289,7 @@ export const importExcelData = async (file: File) => {
         nome: beneficio.nome,
         valor: beneficio.valor,
         descricao: beneficio.descricao,
-        file_id: uploadedFile.id
+        file_id: uploadedFileId
       }));
 
       const { error: beneficiosError } = await supabase
@@ -319,7 +320,7 @@ export const importExcelData = async (file: File) => {
         cargo_id: part.cargo_id,
         conteudo: part.conteudo,
         categoria: part.categoria,
-        file_id: uploadedFile.id, // Add required file_id
+        file_id: uploadedFileId,
         convenio_id: convenio?.id || null
       }));
 

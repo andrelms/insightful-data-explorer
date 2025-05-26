@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { addSystemLog } from './logger';
 import { 
@@ -210,7 +211,8 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
           .insert({
             cargo_id: cargoId,
             conteudo: particularidade,
-            categoria: 'Geral'
+            categoria: 'Geral',
+            file_id: 'placeholder-file-id'
           });
         
         // Add to processed list
@@ -247,7 +249,7 @@ export const processDataWithGemini = async (
         cargo_id: part.cargo_id,
         conteudo: part.conteudo,
         categoria: part.categoria,
-        file_id: fileId, // Add required file_id
+        file_id: fileId,
         convenio_id: convenio?.id || null
       }));
 

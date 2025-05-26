@@ -1,4 +1,3 @@
-
 // Types for data import functionality
 import { SupabaseClient } from "@supabase/supabase-js";
 
@@ -59,4 +58,10 @@ export interface ProcessingContext {
   fileName: string;
   importId: string;
   geminiApiKey?: string;
+}
+
+export interface ProcessingResult {
+  convention: ConvencaoImport | null;
+  pisosSalariais: PisoSalarialImport[];
+  particularidades: ParticularidadeImport[];
 }
