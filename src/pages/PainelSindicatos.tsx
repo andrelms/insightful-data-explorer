@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -128,7 +127,7 @@ const PainelSindicatos = () => {
 
         const convenioIds = convenios.map(c => c.id);
 
-        // Buscar cargos dos convenios
+        // Buscar cargos dos convenios (incluindo duplicados)
         const { data: cargos } = await supabase
           .from('cargos')
           .select(`
@@ -139,17 +138,17 @@ const PainelSindicatos = () => {
           `)
           .in('convenio_id', convenioIds);
 
-        // Buscar beneficios gerais dos convenios com origem
+        // Buscar beneficios gerais dos convenios (excluindo tipo 'site')
         const { data: beneficios } = await supabase
           .from('beneficios_gerais')
           .select(`
             tipo,
             nome,
             valor,
-            descricao,
-            fonte_coluna
+            descricao
           `)
-          .in('convenio_id', convenioIds);
+          .in('convenio_id', convenioIds)
+          .neq('tipo', 'site'); // Excluir tipo 'site'
 
         // Buscar particularidades
         const { data: particularidades } = await supabase
@@ -206,7 +205,7 @@ const PainelSindicatos = () => {
           cargos: cargosCompletos,
           beneficios: beneficios?.map(b => ({
             ...b,
-            origem: b.fonte_coluna || 'Sistema'
+            origem: undefined // Remove origem property
           })) || [],
           particularidades: particularidades || []
         });
@@ -239,6 +238,30 @@ const PainelSindicatos = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Criar colunas dinâmicas para pisos salariais baseadas nas descrições
+  const criarColunasPisosSalariais = (cargos: CargoData[]) => {
+    const descricoesUnicas = new Set<string>();
+    cargos.forEach(cargo => {
+      if (cargo.piso_descricao) {
+        descricoesUnicas.add(cargo.piso_descricao);
+      }
+    });
+    return Array.from(descricoesUnicas);
+  };
+
+  // Criar colunas dinâmicas para valores de hora baseadas nos tipos
+  const criarColunasValoresHora = (cargos: CargoData[]) => {
+    const tiposUnicos = new Set<string>();
+    cargos.forEach(cargo => {
+      cargo.valores_hora.forEach(vh => {
+        if (vh.tipo) {
+          tiposUnicos.add(vh.tipo);
+        }
+      });
+    });
+    return Array.from(tiposUnicos);
   };
 
   // Filter and search logic
@@ -411,84 +434,98 @@ const PainelSindicatos = () => {
                               </div>
                             </div>
 
-                            {/* Cargos e Pisos Salariais */}
+                            {/* Cargos e Pisos Salariais com colunas dinâmicas */}
                             {sindicato.cargos && sindicato.cargos.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Cargos e Pisos Salariais</h4>
                                 <div className="overflow-x-auto">
-                                  <table className="w-full min-w-[400px] border-collapse text-left">
-                                    <thead>
-                                      <tr>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Carga Horária</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
-                                        {sindicato.cargos[0]?.cbo && (
-                                          <th className="p-2 border bg-muted text-xs uppercase">CBO</th>
-                                        )}
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {sindicato.cargos.map((cargo, i) => (
-                                        <tr key={i} className="even:bg-muted/30">
-                                          <td className="p-2 border">{cargo.cargo}</td>
-                                          <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
-                                          <td className="p-2 border">
-                                            <div>
-                                              <div>{formatCurrency(cargo.piso_salarial)}</div>
-                                              {cargo.piso_descricao && (
-                                                <div className="text-xs text-muted-foreground">{cargo.piso_descricao}</div>
+                                  {(() => {
+                                    const descricoesUnicas = criarColunasPisosSalariais(sindicato.cargos);
+                                    return (
+                                      <table className="w-full min-w-[400px] border-collapse text-left">
+                                        <thead>
+                                          <tr>
+                                            <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
+                                            <th className="p-2 border bg-muted text-xs uppercase">Carga Horária</th>
+                                            <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
+                                            {descricoesUnicas.map(desc => (
+                                              <th key={desc} className="p-2 border bg-muted text-xs uppercase">{desc}</th>
+                                            ))}
+                                            {sindicato.cargos[0]?.cbo && (
+                                              <th className="p-2 border bg-muted text-xs uppercase">CBO</th>
+                                            )}
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {sindicato.cargos.map((cargo, i) => (
+                                            <tr key={i} className="even:bg-muted/30">
+                                              <td className="p-2 border">{cargo.cargo}</td>
+                                              <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
+                                              <td className="p-2 border">
+                                                {!cargo.piso_descricao ? formatCurrency(cargo.piso_salarial) : '-'}
+                                              </td>
+                                              {descricoesUnicas.map(desc => (
+                                                <td key={desc} className="p-2 border">
+                                                  {cargo.piso_descricao === desc ? formatCurrency(cargo.piso_salarial) : '-'}
+                                                </td>
+                                              ))}
+                                              {cargo.cbo && (
+                                                <td className="p-2 border">{cargo.cbo}</td>
                                               )}
-                                            </div>
-                                          </td>
-                                          {cargo.cbo && (
-                                            <td className="p-2 border">{cargo.cbo}</td>
-                                          )}
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             )}
 
-                            {/* Valores Hora Extra */}
+                            {/* Valores Hora com colunas dinâmicas */}
                             {sindicato.cargos.some(c => c.valores_hora.length > 0) && (
                               <div className="space-y-2">
-                                <h4 className="font-medium text-xs text-accent-foreground">Valores Hora Extra</h4>
+                                <h4 className="font-medium text-xs text-accent-foreground">Valores Hora</h4>
                                 <div className="overflow-x-auto">
-                                  <table className="w-full border-collapse text-left">
-                                    <thead>
-                                      <tr>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Hora Normal</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Hora Extra 50%</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Hora Extra 100%</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {sindicato.cargos.map((cargo) => {
-                                        if (cargo.valores_hora.length === 0) return null;
-                                        
-                                        const horaNormal = cargo.valores_hora.find(v => v.tipo.includes('normal') || v.tipo.includes('Normal'));
-                                        const hora50 = cargo.valores_hora.find(v => v.tipo.includes('50'));
-                                        const hora100 = cargo.valores_hora.find(v => v.tipo.includes('100'));
-                                        
-                                        return (
-                                          <tr key={cargo.id} className="even:bg-muted/30">
-                                            <td className="p-2 border">{cargo.cargo}</td>
-                                            <td className="p-2 border">{horaNormal ? formatCurrency(horaNormal.valor) : '-'}</td>
-                                            <td className="p-2 border">{hora50 ? formatCurrency(hora50.valor) : '-'}</td>
-                                            <td className="p-2 border">{hora100 ? formatCurrency(hora100.valor) : '-'}</td>
+                                  {(() => {
+                                    const tiposUnicos = criarColunasValoresHora(sindicato.cargos);
+                                    return (
+                                      <table className="w-full border-collapse text-left">
+                                        <thead>
+                                          <tr>
+                                            <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
+                                            {tiposUnicos.map(tipo => (
+                                              <th key={tipo} className="p-2 border bg-muted text-xs uppercase">{tipo}</th>
+                                            ))}
                                           </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
+                                        </thead>
+                                        <tbody>
+                                          {sindicato.cargos.map((cargo) => {
+                                            if (cargo.valores_hora.length === 0) return null;
+                                            
+                                            return (
+                                              <tr key={cargo.id} className="even:bg-muted/30">
+                                                <td className="p-2 border">{cargo.cargo}</td>
+                                                {tiposUnicos.map(tipo => {
+                                                  const valorHora = cargo.valores_hora.find(v => v.tipo === tipo);
+                                                  return (
+                                                    <td key={tipo} className="p-2 border">
+                                                      {valorHora ? formatCurrency(valorHora.valor) : '-'}
+                                                    </td>
+                                                  );
+                                                })}
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             )}
 
-                            {/* Benefícios com origem */}
+                            {/* Benefícios sem coluna origem e sem tipo 'site' */}
                             {sindicato.beneficios && sindicato.beneficios.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
@@ -498,15 +535,13 @@ const PainelSindicatos = () => {
                                       <tr>
                                         <th className="p-2 border bg-muted text-xs uppercase">Benefício</th>
                                         <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Origem</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {sindicato.beneficios.map((beneficio, i) => (
                                         <tr key={i} className="even:bg-muted/30">
-                                          <td className="p-2 border">{beneficio.nome}</td>
+                                          <td className="p-2 border">{beneficio.tipo || beneficio.nome}</td>
                                           <td className="p-2 border">{beneficio.valor || beneficio.descricao || '-'}</td>
-                                          <td className="p-2 border text-xs">{beneficio.origem}</td>
                                         </tr>
                                       ))}
                                     </tbody>

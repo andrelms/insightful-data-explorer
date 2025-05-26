@@ -1,11 +1,11 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { addSystemLog } from './logger';
 import { 
   ConvencaoImport, 
   PisoSalarialImport, 
   ParticularidadeImport, 
-  ProcessingContext 
+  ProcessingContext, 
+  ProcessingResult 
 } from './types';
 
 // Process and save a single data row to database
@@ -231,3 +231,48 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
     return result;
   }
 }
+
+export const processDataWithGemini = async (
+  fileId: string,
+  jsonData: any,
+  apiKey: string
+): Promise<ProcessingResult> => {
+  try {
+    const particularidades = jsonData.particularidades || [];
+    const convenio = jsonData.convenio || null;
+
+    // Processar particularidades
+    if (particularidades.length > 0) {
+      const particularidadesData = particularidades.map((part: any) => ({
+        cargo_id: part.cargo_id,
+        conteudo: part.conteudo,
+        categoria: part.categoria,
+        file_id: fileId, // Add required file_id
+        convenio_id: convenio?.id || null
+      }));
+
+      const { error: particularidadesError } = await supabase
+        .from('particularidades')
+        .insert(particularidadesData);
+
+      if (particularidadesError) {
+        console.error('Erro ao inserir particularidades:', particularidadesError);
+        throw particularidadesError;
+      }
+    }
+
+    return {
+      convention: null,
+      pisosSalariais: [],
+      particularidades: []
+    };
+  } catch (error) {
+    console.error("Erro ao processar linha:", error);
+    await addSystemLog('ERROR', `Erro ao processar linha: ${error instanceof Error ? error.message : "Erro desconhecido"}`, 'import');
+    return {
+      convention: null,
+      pisosSalariais: [],
+      particularidades: []
+    };
+  }
+};
