@@ -7,7 +7,6 @@ import { Search, MapPin, ChevronDown, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Dicionário de siglas dos estados
 const siglas_estados: {[key: string]: string} = {
@@ -38,7 +37,6 @@ interface CargoData {
   carga_horaria: string | null;
   cbo: string | null;
   piso_salarial: number | null;
-  piso_descricao: string | null;
   valores_hora: ValorHoraData[];
 }
 
@@ -53,7 +51,6 @@ interface BeneficioData {
   nome: string;
   valor: string | null;
   descricao: string | null;
-  origem?: string;
 }
 
 interface ParticularidadeData {
@@ -139,15 +136,14 @@ const PainelSindicatos = () => {
           `)
           .in('convenio_id', convenioIds);
 
-        // Buscar beneficios gerais dos convenios com origem
+        // Buscar beneficios gerais dos convenios
         const { data: beneficios } = await supabase
           .from('beneficios_gerais')
           .select(`
             tipo,
             nome,
             valor,
-            descricao,
-            fonte_coluna
+            descricao
           `)
           .in('convenio_id', convenioIds);
 
@@ -167,7 +163,7 @@ const PainelSindicatos = () => {
           for (const cargo of cargos) {
             const { data: pisoSalarial } = await supabase
               .from('piso_salarial')
-              .select('valor, descricao')
+              .select('valor')
               .eq('cargo_id', cargo.id)
               .maybeSingle();
 
@@ -183,7 +179,6 @@ const PainelSindicatos = () => {
             cargosCompletos.push({
               ...cargo,
               piso_salarial: pisoSalarial?.valor || null,
-              piso_descricao: pisoSalarial?.descricao || null,
               valores_hora: valoresHora || []
             });
           }
@@ -204,10 +199,7 @@ const PainelSindicatos = () => {
           ...sindicato,
           estado: estadoSigla,
           cargos: cargosCompletos,
-          beneficios: beneficios?.map(b => ({
-            ...b,
-            origem: b.fonte_coluna || 'Sistema'
-          })) || [],
+          beneficios: beneficios || [],
           particularidades: particularidades || []
         });
       }
@@ -279,29 +271,6 @@ const PainelSindicatos = () => {
       currency: 'BRL'
     }).format(value);
   };
-
-  // Agrupar particularidades por categoria
-  const agruparParticularidades = (particularidades: ParticularidadeData[]) => {
-    const grupos: Record<string, ParticularidadeData[]> = {};
-    
-    particularidades.forEach(part => {
-      const categoria = part.categoria || 'Geral';
-      if (!grupos[categoria]) {
-        grupos[categoria] = [];
-      }
-      grupos[categoria].push(part);
-    });
-    
-    return grupos;
-  };
-
-  // Determinar quantas colunas usar baseado no filtro
-  const getGridCols = () => {
-    if (estadoFilter !== "all") {
-      return "grid-cols-1"; // Uma coluna quando filtrado para expandir
-    }
-    return "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"; // Layout normal
-  };
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -358,7 +327,7 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className={`grid ${getGridCols()} gap-6`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredEstados.map((estado) => (
             <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full">
@@ -401,7 +370,13 @@ const PainelSindicatos = () => {
                             {/* Informações do Sindicato */}
                             <div className="space-y-2">
                               <h4 className="font-medium text-xs text-accent-foreground">Informações do Sindicato</h4>
-                              <div className="grid grid-cols-1 gap-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                {sindicato.site && (
+                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                    <div className="text-xs font-medium">Site</div>
+                                    <div className="truncate">{sindicato.site}</div>
+                                  </div>
+                                )}
                                 {sindicato.data_base && (
                                   <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
                                     <div className="text-xs font-medium">Data Base</div>
@@ -432,14 +407,7 @@ const PainelSindicatos = () => {
                                         <tr key={i} className="even:bg-muted/30">
                                           <td className="p-2 border">{cargo.cargo}</td>
                                           <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
-                                          <td className="p-2 border">
-                                            <div>
-                                              <div>{formatCurrency(cargo.piso_salarial)}</div>
-                                              {cargo.piso_descricao && (
-                                                <div className="text-xs text-muted-foreground">{cargo.piso_descricao}</div>
-                                              )}
-                                            </div>
-                                          </td>
+                                          <td className="p-2 border">{formatCurrency(cargo.piso_salarial)}</td>
                                           {cargo.cbo && (
                                             <td className="p-2 border">{cargo.cbo}</td>
                                           )}
@@ -460,80 +428,53 @@ const PainelSindicatos = () => {
                                     <thead>
                                       <tr>
                                         <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Hora Normal</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Hora Extra 50%</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Hora Extra 100%</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Tipo</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {sindicato.cargos.map((cargo) => {
-                                        if (cargo.valores_hora.length === 0) return null;
-                                        
-                                        const horaNormal = cargo.valores_hora.find(v => v.tipo.includes('normal') || v.tipo.includes('Normal'));
-                                        const hora50 = cargo.valores_hora.find(v => v.tipo.includes('50'));
-                                        const hora100 = cargo.valores_hora.find(v => v.tipo.includes('100'));
-                                        
-                                        return (
-                                          <tr key={cargo.id} className="even:bg-muted/30">
+                                      {sindicato.cargos.map((cargo) => 
+                                        cargo.valores_hora.map((valor, i) => (
+                                          <tr key={`${cargo.id}-${i}`} className="even:bg-muted/30">
                                             <td className="p-2 border">{cargo.cargo}</td>
-                                            <td className="p-2 border">{horaNormal ? formatCurrency(horaNormal.valor) : '-'}</td>
-                                            <td className="p-2 border">{hora50 ? formatCurrency(hora50.valor) : '-'}</td>
-                                            <td className="p-2 border">{hora100 ? formatCurrency(hora100.valor) : '-'}</td>
+                                            <td className="p-2 border">{valor.tipo}</td>
+                                            <td className="p-2 border">{formatCurrency(valor.valor)}</td>
                                           </tr>
-                                        );
-                                      })}
+                                        ))
+                                      )}
                                     </tbody>
                                   </table>
                                 </div>
                               </div>
                             )}
 
-                            {/* Benefícios com origem */}
+                            {/* Benefícios */}
                             {sindicato.beneficios && sindicato.beneficios.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
-                                <div className="overflow-x-auto">
-                                  <table className="w-full border-collapse text-left">
-                                    <thead>
-                                      <tr>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Benefício</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Origem</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {sindicato.beneficios.map((beneficio, i) => (
-                                        <tr key={i} className="even:bg-muted/30">
-                                          <td className="p-2 border">{beneficio.nome}</td>
-                                          <td className="p-2 border">{beneficio.valor || beneficio.descricao || '-'}</td>
-                                          <td className="p-2 border text-xs">{beneficio.origem}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {sindicato.beneficios.map((beneficio, i) => (
+                                    <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-green-500">
+                                      <div className="text-xs font-medium">{beneficio.nome}</div>
+                                      <div>{beneficio.valor || beneficio.descricao || '-'}</div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
 
-                            {/* Particularidades agrupadas por categoria */}
+                            {/* Particularidades */}
                             {sindicato.particularidades && sindicato.particularidades.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Particularidades</h4>
-                                <div className="space-y-3">
-                                  {Object.entries(agruparParticularidades(sindicato.particularidades)).map(([categoria, items]) => (
-                                    <Collapsible key={categoria}>
-                                      <CollapsibleTrigger className="flex items-center justify-between w-full p-2 bg-muted/30 rounded border-l-2 border-orange-500 hover:bg-muted/50">
-                                        <span className="text-xs font-medium">{categoria}</span>
-                                        <ChevronDown className="h-3 w-3" />
-                                      </CollapsibleTrigger>
-                                      <CollapsibleContent className="mt-1 space-y-1">
-                                        {items.map((item, i) => (
-                                          <div key={i} className="ml-4 p-2 bg-muted/20 rounded text-xs">
-                                            {item.conteudo}
-                                          </div>
-                                        ))}
-                                      </CollapsibleContent>
-                                    </Collapsible>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {sindicato.particularidades.map((part, i) => (
+                                    <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-orange-500">
+                                      {part.categoria && (
+                                        <div className="text-xs font-medium">{part.categoria}</div>
+                                      )}
+                                      <div className="text-xs">{part.conteudo}</div>
+                                    </div>
                                   ))}
                                 </div>
                               </div>
