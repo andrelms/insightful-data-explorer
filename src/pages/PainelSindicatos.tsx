@@ -28,7 +28,9 @@ interface SindicatoData {
   data_base: string | null;
   estado: string | null;
   cargos: CargoData[];
-  beneficios: BeneficioData[];
+  valoresHora: ValorHoraData[];
+  anotacoesBeneficios: AnotacaoBeneficioData[];
+  anotacoesDataBase: AnotacaoDataBaseData[];
   particularidades: ParticularidadeData[];
 }
 
@@ -37,23 +39,27 @@ interface CargoData {
   cargo: string;
   carga_horaria: string | null;
   cbo: string | null;
-  piso_salarial: number | null;
-  piso_descricao: string | null;
-  valores_hora: ValorHoraData[];
+  pisos_salariais: PisoSalarialData[];
+}
+
+interface PisoSalarialData {
+  descricao: string | null;
+  valor: number | null;
 }
 
 interface ValorHoraData {
-  tipo: string;
-  valor: number;
   descricao: string | null;
+  valor: number;
 }
 
-interface BeneficioData {
-  tipo: string;
-  nome: string;
-  valor: string | null;
-  descricao: string | null;
-  origem?: string;
+interface AnotacaoBeneficioData {
+  coluna: string;
+  valor_formatado: string | null;
+  valor_original: string | null;
+}
+
+interface AnotacaoDataBaseData {
+  valor: string;
 }
 
 interface ParticularidadeData {
@@ -82,7 +88,7 @@ const PainelSindicatos = () => {
   const fetchDadosSupabase = async () => {
     setLoading(true);
     try {
-      // Buscar sindicatos com convenios, cargos e dados relacionados
+      // Buscar sindicatos
       const { data: sindicatos, error: sindicatosError } = await supabase
         .from('sindicatos')
         .select(`
@@ -120,7 +126,9 @@ const PainelSindicatos = () => {
           sindicatosCompletos.push({
             ...sindicato,
             cargos: [],
-            beneficios: [],
+            valoresHora: [],
+            anotacoesBeneficios: [],
+            anotacoesDataBase: [],
             particularidades: []
           });
           continue;
@@ -139,18 +147,6 @@ const PainelSindicatos = () => {
           `)
           .in('convenio_id', convenioIds);
 
-        // Buscar beneficios gerais dos convenios com origem
-        const { data: beneficios } = await supabase
-          .from('beneficios_gerais')
-          .select(`
-            tipo,
-            nome,
-            valor,
-            descricao,
-            fonte_coluna
-          `)
-          .in('convenio_id', convenioIds);
-
         // Buscar particularidades
         const { data: particularidades } = await supabase
           .from('particularidades')
@@ -162,32 +158,47 @@ const PainelSindicatos = () => {
 
         // Para cada cargo, buscar piso salarial e valores de hora
         const cargosCompletos: CargoData[] = [];
+        const valoresHoraCompletos: ValorHoraData[] = [];
         
         if (cargos) {
           for (const cargo of cargos) {
-            const { data: pisoSalarial } = await supabase
+            const { data: pisosSalariais } = await supabase
               .from('piso_salarial')
-              .select('valor, descricao')
-              .eq('cargo_id', cargo.id)
-              .maybeSingle();
+              .select('descricao, valor')
+              .eq('cargo_id', cargo.id);
 
             const { data: valoresHora } = await supabase
               .from('valores_hora')
               .select(`
-                tipo,
-                valor,
-                descricao
+                descricao,
+                valor
               `)
               .eq('cargo_id', cargo.id);
 
             cargosCompletos.push({
               ...cargo,
-              piso_salarial: pisoSalarial?.valor || null,
-              piso_descricao: pisoSalarial?.descricao || null,
-              valores_hora: valoresHora || []
+              pisos_salariais: pisosSalariais || []
             });
+
+            if (valoresHora) {
+              valoresHoraCompletos.push(...valoresHora);
+            }
           }
         }
+
+        // Buscar anotações para benefícios (excluindo DATA BASE, PARTICULARIDADE, SITE)
+        const { data: anotacoesBeneficios } = await supabase
+          .from('anotacoes')
+          .select('coluna, valor_formatado, valor_original')
+          .in('convenio_id', convenioIds)
+          .not('coluna', 'in', '("DATA BASE","PARTICULARIDADE","SITE")');
+
+        // Buscar anotações para DATA BASE
+        const { data: anotacoesDataBase } = await supabase
+          .from('anotacoes')
+          .select('valor')
+          .in('convenio_id', convenioIds)
+          .eq('coluna', 'DATA BASE');
 
         // Extrair estado do sindicato (pode estar na data_base ou no nome)
         let estadoSigla = sindicato.estado;
@@ -204,10 +215,9 @@ const PainelSindicatos = () => {
           ...sindicato,
           estado: estadoSigla,
           cargos: cargosCompletos,
-          beneficios: beneficios?.map(b => ({
-            ...b,
-            origem: b.fonte_coluna || 'Sistema'
-          })) || [],
+          valoresHora: valoresHoraCompletos,
+          anotacoesBeneficios: anotacoesBeneficios || [],
+          anotacoesDataBase: anotacoesDataBase || [],
           particularidades: particularidades || []
         });
       }
@@ -398,20 +408,22 @@ const PainelSindicatos = () => {
                               </div>
                             )}
                             
-                            {/* Informações do Sindicato */}
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-xs text-accent-foreground">Informações do Sindicato</h4>
-                              <div className="grid grid-cols-1 gap-2">
-                                {sindicato.data_base && (
-                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
-                                    <div className="text-xs font-medium">Data Base</div>
-                                    <div>{sindicato.data_base}</div>
-                                  </div>
-                                )}
+                            {/* Informações do Sindicato - Anotações DATA BASE */}
+                            {sindicato.anotacoesDataBase && sindicato.anotacoesDataBase.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Informações do Sindicato</h4>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {sindicato.anotacoesDataBase.map((anotacao, i) => (
+                                    <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                      <div className="text-xs font-medium">Data Base</div>
+                                      <div>{anotacao.valor}</div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
+                            )}
 
-                            {/* Cargos e Pisos Salariais */}
+                            {/* Cargos e Pisos Salariais - com descrição da tabela piso_salarial */}
                             {sindicato.cargos && sindicato.cargos.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Cargos e Pisos Salariais</h4>
@@ -421,7 +433,8 @@ const PainelSindicatos = () => {
                                       <tr>
                                         <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
                                         <th className="p-2 border bg-muted text-xs uppercase">Carga Horária</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Descrição</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
                                         {sindicato.cargos[0]?.cbo && (
                                           <th className="p-2 border bg-muted text-xs uppercase">CBO</th>
                                         )}
@@ -429,20 +442,41 @@ const PainelSindicatos = () => {
                                     </thead>
                                     <tbody>
                                       {sindicato.cargos.map((cargo, i) => (
+                                        cargo.pisos_salariais.map((piso, j) => (
+                                          <tr key={`${i}-${j}`} className="even:bg-muted/30">
+                                            <td className="p-2 border">{cargo.cargo}</td>
+                                            <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
+                                            <td className="p-2 border">{piso.descricao || '-'}</td>
+                                            <td className="p-2 border">{formatCurrency(piso.valor)}</td>
+                                            {cargo.cbo && (
+                                              <td className="p-2 border">{cargo.cbo}</td>
+                                            )}
+                                          </tr>
+                                        ))
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Valores Hora - com descrição da tabela valores_hora */}
+                            {sindicato.valoresHora && sindicato.valoresHora.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Valores Hora</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full border-collapse text-left">
+                                    <thead>
+                                      <tr>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Descrição</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {sindicato.valoresHora.map((valorHora, i) => (
                                         <tr key={i} className="even:bg-muted/30">
-                                          <td className="p-2 border">{cargo.cargo}</td>
-                                          <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
-                                          <td className="p-2 border">
-                                            <div>
-                                              <div>{formatCurrency(cargo.piso_salarial)}</div>
-                                              {cargo.piso_descricao && (
-                                                <div className="text-xs text-muted-foreground">{cargo.piso_descricao}</div>
-                                              )}
-                                            </div>
-                                          </td>
-                                          {cargo.cbo && (
-                                            <td className="p-2 border">{cargo.cbo}</td>
-                                          )}
+                                          <td className="p-2 border">{valorHora.descricao || '-'}</td>
+                                          <td className="p-2 border">{formatCurrency(valorHora.valor)}</td>
                                         </tr>
                                       ))}
                                     </tbody>
@@ -451,62 +485,25 @@ const PainelSindicatos = () => {
                               </div>
                             )}
 
-                            {/* Valores Hora Extra */}
-                            {sindicato.cargos.some(c => c.valores_hora.length > 0) && (
-                              <div className="space-y-2">
-                                <h4 className="font-medium text-xs text-accent-foreground">Valores Hora Extra</h4>
-                                <div className="overflow-x-auto">
-                                  <table className="w-full border-collapse text-left">
-                                    <thead>
-                                      <tr>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Hora Normal</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Hora Extra 50%</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Hora Extra 100%</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {sindicato.cargos.map((cargo) => {
-                                        if (cargo.valores_hora.length === 0) return null;
-                                        
-                                        const horaNormal = cargo.valores_hora.find(v => v.tipo.includes('normal') || v.tipo.includes('Normal'));
-                                        const hora50 = cargo.valores_hora.find(v => v.tipo.includes('50'));
-                                        const hora100 = cargo.valores_hora.find(v => v.tipo.includes('100'));
-                                        
-                                        return (
-                                          <tr key={cargo.id} className="even:bg-muted/30">
-                                            <td className="p-2 border">{cargo.cargo}</td>
-                                            <td className="p-2 border">{horaNormal ? formatCurrency(horaNormal.valor) : '-'}</td>
-                                            <td className="p-2 border">{hora50 ? formatCurrency(hora50.valor) : '-'}</td>
-                                            <td className="p-2 border">{hora100 ? formatCurrency(hora100.valor) : '-'}</td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Benefícios com origem */}
-                            {sindicato.beneficios && sindicato.beneficios.length > 0 && (
+                            {/* Benefícios - Anotações sem DATA BASE, PARTICULARIDADE, SITE */}
+                            {sindicato.anotacoesBeneficios && sindicato.anotacoesBeneficios.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
                                 <div className="overflow-x-auto">
                                   <table className="w-full border-collapse text-left">
                                     <thead>
                                       <tr>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Benefício</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Origem</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Coluna</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Valor Formatado</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Valor Original</th>
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {sindicato.beneficios.map((beneficio, i) => (
+                                      {sindicato.anotacoesBeneficios.map((anotacao, i) => (
                                         <tr key={i} className="even:bg-muted/30">
-                                          <td className="p-2 border">{beneficio.nome}</td>
-                                          <td className="p-2 border">{beneficio.valor || beneficio.descricao || '-'}</td>
-                                          <td className="p-2 border text-xs">{beneficio.origem}</td>
+                                          <td className="p-2 border">{anotacao.coluna}</td>
+                                          <td className="p-2 border">{anotacao.valor_formatado || '-'}</td>
+                                          <td className="p-2 border">{anotacao.valor_original || '-'}</td>
                                         </tr>
                                       ))}
                                     </tbody>
