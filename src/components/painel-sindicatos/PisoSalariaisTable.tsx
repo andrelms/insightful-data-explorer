@@ -14,7 +14,7 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
     }).format(value);
   };
 
-  // Criar colunas dinâmicas para pisos salariais baseadas nas descrições únicas
+  // Criar colunas dinâmicas para pisos salariais baseadas nas descrições
   const criarColunasPisosSalariais = (cargos: CargoData[]) => {
     const descricoesUnicas = new Set<string>();
     cargos.forEach(cargo => {
@@ -22,11 +22,10 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
         descricoesUnicas.add(cargo.piso_descricao);
       }
     });
-    return Array.from(descricoesUnicas).sort();
+    return Array.from(descricoesUnicas);
   };
 
   const descricoesUnicas = criarColunasPisosSalariais(cargos);
-  const temCBO = cargos.some(cargo => cargo.cbo);
 
   return (
     <div className="space-y-2">
@@ -37,34 +36,30 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
             <tr>
               <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
               <th className="p-2 border bg-muted text-xs uppercase">Carga Horária</th>
-              {descricoesUnicas.length === 0 && (
-                <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
-              )}
+              <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
               {descricoesUnicas.map(desc => (
                 <th key={desc} className="p-2 border bg-muted text-xs uppercase">{desc}</th>
               ))}
-              {temCBO && (
+              {cargos[0]?.cbo && (
                 <th className="p-2 border bg-muted text-xs uppercase">CBO</th>
               )}
             </tr>
           </thead>
           <tbody>
             {cargos.map((cargo, i) => (
-              <tr key={`${cargo.id}-${i}`} className="even:bg-muted/30">
+              <tr key={i} className="even:bg-muted/30">
                 <td className="p-2 border">{cargo.cargo}</td>
                 <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
-                {descricoesUnicas.length === 0 && (
-                  <td className="p-2 border">
-                    {formatCurrency(cargo.piso_salarial)}
-                  </td>
-                )}
+                <td className="p-2 border">
+                  {!cargo.piso_descricao ? formatCurrency(cargo.piso_salarial) : '-'}
+                </td>
                 {descricoesUnicas.map(desc => (
                   <td key={desc} className="p-2 border">
                     {cargo.piso_descricao === desc ? formatCurrency(cargo.piso_salarial) : '-'}
                   </td>
                 ))}
-                {temCBO && (
-                  <td className="p-2 border">{cargo.cbo || '-'}</td>
+                {cargo.cbo && (
+                  <td className="p-2 border">{cargo.cbo}</td>
                 )}
               </tr>
             ))}
