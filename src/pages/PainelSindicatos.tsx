@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,6 @@ import { Search, MapPin, ChevronDown, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Dicionário de siglas dos estados
 const siglas_estados: {[key: string]: string} = {
@@ -37,7 +37,6 @@ interface CargoData {
   carga_horaria: string | null;
   cbo: string | null;
   piso_salarial: number | null;
-  piso_descricao: string | null;
   valores_hora: ValorHoraData[];
 }
 
@@ -52,7 +51,6 @@ interface BeneficioData {
   nome: string;
   valor: string | null;
   descricao: string | null;
-  origem?: string;
 }
 
 interface ParticularidadeData {
@@ -127,7 +125,7 @@ const PainelSindicatos = () => {
 
         const convenioIds = convenios.map(c => c.id);
 
-        // Buscar cargos dos convenios (incluindo duplicados)
+        // Buscar cargos dos convenios
         const { data: cargos } = await supabase
           .from('cargos')
           .select(`
@@ -138,7 +136,7 @@ const PainelSindicatos = () => {
           `)
           .in('convenio_id', convenioIds);
 
-        // Buscar beneficios gerais dos convenios (excluindo tipo 'site')
+        // Buscar beneficios gerais dos convenios
         const { data: beneficios } = await supabase
           .from('beneficios_gerais')
           .select(`
@@ -147,8 +145,7 @@ const PainelSindicatos = () => {
             valor,
             descricao
           `)
-          .in('convenio_id', convenioIds)
-          .neq('tipo', 'site'); // Excluir tipo 'site'
+          .in('convenio_id', convenioIds);
 
         // Buscar particularidades
         const { data: particularidades } = await supabase
@@ -166,7 +163,7 @@ const PainelSindicatos = () => {
           for (const cargo of cargos) {
             const { data: pisoSalarial } = await supabase
               .from('piso_salarial')
-              .select('valor, descricao')
+              .select('valor')
               .eq('cargo_id', cargo.id)
               .maybeSingle();
 
@@ -182,7 +179,6 @@ const PainelSindicatos = () => {
             cargosCompletos.push({
               ...cargo,
               piso_salarial: pisoSalarial?.valor || null,
-              piso_descricao: pisoSalarial?.descricao || null,
               valores_hora: valoresHora || []
             });
           }
@@ -203,10 +199,7 @@ const PainelSindicatos = () => {
           ...sindicato,
           estado: estadoSigla,
           cargos: cargosCompletos,
-          beneficios: beneficios?.map(b => ({
-            ...b,
-            origem: undefined // Remove origem property
-          })) || [],
+          beneficios: beneficios || [],
           particularidades: particularidades || []
         });
       }
@@ -238,30 +231,6 @@ const PainelSindicatos = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Criar colunas dinâmicas para pisos salariais baseadas nas descrições
-  const criarColunasPisosSalariais = (cargos: CargoData[]) => {
-    const descricoesUnicas = new Set<string>();
-    cargos.forEach(cargo => {
-      if (cargo.piso_descricao) {
-        descricoesUnicas.add(cargo.piso_descricao);
-      }
-    });
-    return Array.from(descricoesUnicas);
-  };
-
-  // Criar colunas dinâmicas para valores de hora baseadas nos tipos
-  const criarColunasValoresHora = (cargos: CargoData[]) => {
-    const tiposUnicos = new Set<string>();
-    cargos.forEach(cargo => {
-      cargo.valores_hora.forEach(vh => {
-        if (vh.tipo) {
-          tiposUnicos.add(vh.tipo);
-        }
-      });
-    });
-    return Array.from(tiposUnicos);
   };
 
   // Filter and search logic
@@ -301,29 +270,6 @@ const PainelSindicatos = () => {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
-  };
-
-  // Agrupar particularidades por categoria
-  const agruparParticularidades = (particularidades: ParticularidadeData[]) => {
-    const grupos: Record<string, ParticularidadeData[]> = {};
-    
-    particularidades.forEach(part => {
-      const categoria = part.categoria || 'Geral';
-      if (!grupos[categoria]) {
-        grupos[categoria] = [];
-      }
-      grupos[categoria].push(part);
-    });
-    
-    return grupos;
-  };
-
-  // Determinar quantas colunas usar baseado no filtro
-  const getGridCols = () => {
-    if (estadoFilter !== "all") {
-      return "grid-cols-1"; // Uma coluna quando filtrado para expandir
-    }
-    return "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"; // Layout normal
   };
   
   return (
@@ -381,7 +327,7 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className={`grid ${getGridCols()} gap-6`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredEstados.map((estado) => (
             <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full">
@@ -424,7 +370,13 @@ const PainelSindicatos = () => {
                             {/* Informações do Sindicato */}
                             <div className="space-y-2">
                               <h4 className="font-medium text-xs text-accent-foreground">Informações do Sindicato</h4>
-                              <div className="grid grid-cols-1 gap-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                {sindicato.site && (
+                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                    <div className="text-xs font-medium">Site</div>
+                                    <div className="truncate">{sindicato.site}</div>
+                                  </div>
+                                )}
                                 {sindicato.data_base && (
                                   <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
                                     <div className="text-xs font-medium">Data Base</div>
@@ -434,114 +386,31 @@ const PainelSindicatos = () => {
                               </div>
                             </div>
 
-                            {/* Cargos e Pisos Salariais com colunas dinâmicas */}
+                            {/* Cargos e Pisos Salariais */}
                             {sindicato.cargos && sindicato.cargos.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Cargos e Pisos Salariais</h4>
                                 <div className="overflow-x-auto">
-                                  {(() => {
-                                    const descricoesUnicas = criarColunasPisosSalariais(sindicato.cargos);
-                                    return (
-                                      <table className="w-full min-w-[400px] border-collapse text-left">
-                                        <thead>
-                                          <tr>
-                                            <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
-                                            <th className="p-2 border bg-muted text-xs uppercase">Carga Horária</th>
-                                            <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
-                                            {descricoesUnicas.map(desc => (
-                                              <th key={desc} className="p-2 border bg-muted text-xs uppercase">{desc}</th>
-                                            ))}
-                                            {sindicato.cargos[0]?.cbo && (
-                                              <th className="p-2 border bg-muted text-xs uppercase">CBO</th>
-                                            )}
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {sindicato.cargos.map((cargo, i) => (
-                                            <tr key={i} className="even:bg-muted/30">
-                                              <td className="p-2 border">{cargo.cargo}</td>
-                                              <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
-                                              <td className="p-2 border">
-                                                {!cargo.piso_descricao ? formatCurrency(cargo.piso_salarial) : '-'}
-                                              </td>
-                                              {descricoesUnicas.map(desc => (
-                                                <td key={desc} className="p-2 border">
-                                                  {cargo.piso_descricao === desc ? formatCurrency(cargo.piso_salarial) : '-'}
-                                                </td>
-                                              ))}
-                                              {cargo.cbo && (
-                                                <td className="p-2 border">{cargo.cbo}</td>
-                                              )}
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    );
-                                  })()}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Valores Hora com colunas dinâmicas */}
-                            {sindicato.cargos.some(c => c.valores_hora.length > 0) && (
-                              <div className="space-y-2">
-                                <h4 className="font-medium text-xs text-accent-foreground">Valores Hora</h4>
-                                <div className="overflow-x-auto">
-                                  {(() => {
-                                    const tiposUnicos = criarColunasValoresHora(sindicato.cargos);
-                                    return (
-                                      <table className="w-full border-collapse text-left">
-                                        <thead>
-                                          <tr>
-                                            <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
-                                            {tiposUnicos.map(tipo => (
-                                              <th key={tipo} className="p-2 border bg-muted text-xs uppercase">{tipo}</th>
-                                            ))}
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {sindicato.cargos.map((cargo) => {
-                                            if (cargo.valores_hora.length === 0) return null;
-                                            
-                                            return (
-                                              <tr key={cargo.id} className="even:bg-muted/30">
-                                                <td className="p-2 border">{cargo.cargo}</td>
-                                                {tiposUnicos.map(tipo => {
-                                                  const valorHora = cargo.valores_hora.find(v => v.tipo === tipo);
-                                                  return (
-                                                    <td key={tipo} className="p-2 border">
-                                                      {valorHora ? formatCurrency(valorHora.valor) : '-'}
-                                                    </td>
-                                                  );
-                                                })}
-                                              </tr>
-                                            );
-                                          })}
-                                        </tbody>
-                                      </table>
-                                    );
-                                  })()}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Benefícios sem coluna origem e sem tipo 'site' */}
-                            {sindicato.beneficios && sindicato.beneficios.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
-                                <div className="overflow-x-auto">
-                                  <table className="w-full border-collapse text-left">
+                                  <table className="w-full min-w-[400px] border-collapse text-left">
                                     <thead>
                                       <tr>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Benefício</th>
-                                        <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Carga Horária</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Piso Salarial</th>
+                                        {sindicato.cargos[0]?.cbo && (
+                                          <th className="p-2 border bg-muted text-xs uppercase">CBO</th>
+                                        )}
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {sindicato.beneficios.map((beneficio, i) => (
+                                      {sindicato.cargos.map((cargo, i) => (
                                         <tr key={i} className="even:bg-muted/30">
-                                          <td className="p-2 border">{beneficio.tipo || beneficio.nome}</td>
-                                          <td className="p-2 border">{beneficio.valor || beneficio.descricao || '-'}</td>
+                                          <td className="p-2 border">{cargo.cargo}</td>
+                                          <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
+                                          <td className="p-2 border">{formatCurrency(cargo.piso_salarial)}</td>
+                                          {cargo.cbo && (
+                                            <td className="p-2 border">{cargo.cbo}</td>
+                                          )}
                                         </tr>
                                       ))}
                                     </tbody>
@@ -550,25 +419,62 @@ const PainelSindicatos = () => {
                               </div>
                             )}
 
-                            {/* Particularidades agrupadas por categoria */}
+                            {/* Valores Hora Extra */}
+                            {sindicato.cargos.some(c => c.valores_hora.length > 0) && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Valores Hora Extra</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full border-collapse text-left">
+                                    <thead>
+                                      <tr>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Cargo</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Tipo</th>
+                                        <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {sindicato.cargos.map((cargo) => 
+                                        cargo.valores_hora.map((valor, i) => (
+                                          <tr key={`${cargo.id}-${i}`} className="even:bg-muted/30">
+                                            <td className="p-2 border">{cargo.cargo}</td>
+                                            <td className="p-2 border">{valor.tipo}</td>
+                                            <td className="p-2 border">{formatCurrency(valor.valor)}</td>
+                                          </tr>
+                                        ))
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Benefícios */}
+                            {sindicato.beneficios && sindicato.beneficios.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {sindicato.beneficios.map((beneficio, i) => (
+                                    <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-green-500">
+                                      <div className="text-xs font-medium">{beneficio.nome}</div>
+                                      <div>{beneficio.valor || beneficio.descricao || '-'}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Particularidades */}
                             {sindicato.particularidades && sindicato.particularidades.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Particularidades</h4>
-                                <div className="space-y-3">
-                                  {Object.entries(agruparParticularidades(sindicato.particularidades)).map(([categoria, items]) => (
-                                    <Collapsible key={categoria}>
-                                      <CollapsibleTrigger className="flex items-center justify-between w-full p-2 bg-muted/30 rounded border-l-2 border-orange-500 hover:bg-muted/50">
-                                        <span className="text-xs font-medium">{categoria}</span>
-                                        <ChevronDown className="h-3 w-3" />
-                                      </CollapsibleTrigger>
-                                      <CollapsibleContent className="mt-1 space-y-1">
-                                        {items.map((item, i) => (
-                                          <div key={i} className="ml-4 p-2 bg-muted/20 rounded text-xs">
-                                            {item.conteudo}
-                                          </div>
-                                        ))}
-                                      </CollapsibleContent>
-                                    </Collapsible>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {sindicato.particularidades.map((part, i) => (
+                                    <div key={i} className="bg-muted/30 p-2 rounded border-l-2 border-orange-500">
+                                      {part.categoria && (
+                                        <div className="text-xs font-medium">{part.categoria}</div>
+                                      )}
+                                      <div className="text-xs">{part.conteudo}</div>
+                                    </div>
                                   ))}
                                 </div>
                               </div>

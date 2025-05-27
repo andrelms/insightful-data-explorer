@@ -20,7 +20,7 @@ export type Database = {
           convenio_id: string | null
           created_at: string | null
           extra_detectado: boolean | null
-          file_id: string
+          file_id: string | null
           id: string
           linha: number | null
           registro_idx: number | null
@@ -39,7 +39,7 @@ export type Database = {
           convenio_id?: string | null
           created_at?: string | null
           extra_detectado?: boolean | null
-          file_id: string
+          file_id?: string | null
           id?: string
           linha?: number | null
           registro_idx?: number | null
@@ -58,7 +58,7 @@ export type Database = {
           convenio_id?: string | null
           created_at?: string | null
           extra_detectado?: boolean | null
-          file_id?: string
+          file_id?: string | null
           id?: string
           linha?: number | null
           registro_idx?: number | null
@@ -97,7 +97,7 @@ export type Database = {
           convenio_id: string | null
           created_at: string | null
           descricao: string | null
-          file_id: string
+          file_id: string | null
           fonte_coluna: string | null
           id: string
           nome: string | null
@@ -110,7 +110,7 @@ export type Database = {
           convenio_id?: string | null
           created_at?: string | null
           descricao?: string | null
-          file_id: string
+          file_id?: string | null
           fonte_coluna?: string | null
           id?: string
           nome?: string | null
@@ -123,7 +123,7 @@ export type Database = {
           convenio_id?: string | null
           created_at?: string | null
           descricao?: string | null
-          file_id?: string
+          file_id?: string | null
           fonte_coluna?: string | null
           id?: string
           nome?: string | null
@@ -339,7 +339,7 @@ export type Database = {
           created_at: string | null
           descricao: string | null
           detalhe: string | null
-          file_id: string
+          file_id: string | null
           id: string
           licenca_id: string | null
           updated_at: string | null
@@ -352,7 +352,7 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           detalhe?: string | null
-          file_id: string
+          file_id?: string | null
           id?: string
           licenca_id?: string | null
           updated_at?: string | null
@@ -365,7 +365,7 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           detalhe?: string | null
-          file_id?: string
+          file_id?: string | null
           id?: string
           licenca_id?: string | null
           updated_at?: string | null

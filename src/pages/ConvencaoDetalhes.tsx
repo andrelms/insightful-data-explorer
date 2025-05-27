@@ -1,24 +1,213 @@
-
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useConvencaoDetalhes } from "@/hooks/useConvencaoDetalhes";
-import { ConvencaoDetalhesHeader } from "@/components/convencao-detalhes/ConvencaoDetalhesHeader";
-import { ConvencaoDetalhesInfoCard } from "@/components/convencao-detalhes/ConvencaoDetalhesInfoCard";
-import { ConvencaoDetalhesPisosCard } from "@/components/convencao-detalhes/ConvencaoDetalhesPisosCard";
-import { ConvencaoDetalhesBeneficiosCard } from "@/components/convencao-detalhes/ConvencaoDetalhesBeneficiosCard";
-import { ConvencaoDetalhesParticularidadesCard } from "@/components/convencao-detalhes/ConvencaoDetalhesParticularidadesCard";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ChevronLeft, Download, ExternalLink, Clock, CalendarDays, RefreshCw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { DashboardTable } from "@/components/dashboard/DashboardTable";
+
+interface Convencao {
+  id: string;
+  titulo: string;
+  numero: string;
+  tipo: string;
+  estado: string | null;
+  abrangencia: string | null;
+  sindicato: {
+    nome: string;
+    cnpj: string | null;
+    site: string | null;
+  } | null;
+  vigencia_inicio: string | null;
+  vigencia_fim: string | null;
+  data_base: string | null;
+  data_assinatura?: string | null;
+  fonte: string;
+  assistencia_medica: boolean | null;
+  vale_refeicao: string | null;
+  vale_refeicao_valor: number | null;
+  seguro_vida: boolean | null;
+  uniforme: boolean | null;
+  adicional_noturno: string | null;
+}
+
+interface PisoSalarial {
+  id: string;
+  cargo: string;
+  carga_horaria: string | null;
+  piso_salarial: number | null;
+  valor_hora_normal: number | null;
+  valor_hora_extra_50: number | null;
+  valor_hora_extra_100: number | null;
+}
+
+interface Particularidade {
+  id: string;
+  descricao: string;
+}
+
+interface Beneficio {
+  id: string;
+  tipo: string;
+  valor: string | null;
+  descricao: string | null;
+}
+
+interface Licenca {
+  id: string;
+  tipo: string;
+  dias: number | null;
+  descricao: string | null;
+}
 
 const ConvencaoDetalhes = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { convencao, pisosSalariais, particularidades, beneficios, loading } = useConvencaoDetalhes(id);
+  const [convencao, setConvencao] = useState<Convencao | null>(null);
+  const [pisosSalariais, setPisosSalariais] = useState<PisoSalarial[]>([]);
+  const [particularidades, setParticularidades] = useState<Particularidade[]>([]);
+  const [beneficios, setBeneficios] = useState<Beneficio[]>([]);
+  const [licencas, setLicencas] = useState<Licenca[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Não especificada";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("pt-BR");
-  };
+  useEffect(() => {
+    if (!id) return;
+    
+    const fetchConvencao = async () => {
+      setLoading(true);
+      try {
+        // Buscar dados da convenção
+        const { data: convencaoData, error: convencaoError } = await supabase
+          .from('convenios')
+          .select(`
+            id, descricao, created_at,
+            sindicatos (nome, cnpj, site, data_base)
+          `)
+          .eq('id', id)
+          .single();
+          
+        if (convencaoError) throw convencaoError;
+        
+        // Buscar pisos salariais associados aos cargos dessa convênio
+        const { data: cargosData, error: cargosError } = await supabase
+          .from('cargos')
+          .select(`
+            id, cargo, carga_horaria,
+            piso_salarial (valor, descricao),
+            valores_hora (tipo, valor)
+          `)
+          .eq('convenio_id', id);
+
+        if (cargosError) throw cargosError;
+        
+        // Transformar dados de cargos em pisos salariais
+        const pisosProcessed: PisoSalarial[] = [];
+        if (cargosData) {
+          cargosData.forEach(cargo => {
+            const pisoValor = cargo.piso_salarial && cargo.piso_salarial.length > 0 
+              ? cargo.piso_salarial[0].valor 
+              : null;
+              
+            // Processar valores de hora (normal, 50%, 100%)
+            let valorHoraNormal = null;
+            let valorHoraExtra50 = null;
+            let valorHoraExtra100 = null;
+            
+            if (cargo.valores_hora && Array.isArray(cargo.valores_hora)) {
+              cargo.valores_hora.forEach(valorHora => {
+                if (valorHora.tipo === 'normal') valorHoraNormal = valorHora.valor;
+                if (valorHora.tipo === 'extra_50') valorHoraExtra50 = valorHora.valor;
+                if (valorHora.tipo === 'extra_100') valorHoraExtra100 = valorHora.valor;
+              });
+            }
+            
+            pisosProcessed.push({
+              id: cargo.id,
+              cargo: cargo.cargo || "Não especificado",
+              carga_horaria: cargo.carga_horaria,
+              piso_salarial: pisoValor,
+              valor_hora_normal: valorHoraNormal,
+              valor_hora_extra_50: valorHoraExtra50,
+              valor_hora_extra_100: valorHoraExtra100
+            });
+          });
+        }
+        
+        // Buscar particularidades
+        const { data: particularidadesData, error: particularidadesError } = await supabase
+          .from('particularidades')
+          .select('*')
+          .eq('cargo_id', id);
+          
+        if (particularidadesError) throw particularidadesError;
+        
+        // Buscar licenças
+        const { data: licencasData, error: licencasError } = await supabase
+          .from('licencas')
+          .select('*')
+          .eq('convenio_id', id);
+          
+        if (licencasError) throw licencasError;
+        
+        // Extrair benefícios das particularidades
+        const beneficiosData = particularidadesData?.filter(p => p.categoria === 'benefício') || [];
+        
+        // Atualizar estados
+        if (convencaoData) {
+          setConvencao({
+            ...convencaoData,
+            titulo: convencaoData.descricao || "Sem descrição",
+            numero: convencaoData.id.substring(0, 8),
+            tipo: "Convenção Coletiva",
+            fonte: "Base de dados sindical",
+            vigencia_inicio: convencaoData.created_at,
+            vigencia_fim: null,
+            data_base: convencaoData.sindicatos?.data_base || null,
+            estado: null,
+            abrangencia: null,
+            sindicato: convencaoData.sindicatos,
+            assistencia_medica: false,
+            vale_refeicao: null,
+            vale_refeicao_valor: null,
+            seguro_vida: false,
+            uniforme: false,
+            adicional_noturno: null
+          });
+        }
+        
+        setPisosSalariais(pisosProcessed);
+        
+        // Transformar particularidades
+        const partProcessed = (particularidadesData || [])
+          .filter(p => p.categoria !== 'benefício')
+          .map(p => ({
+            id: p.id,
+            descricao: p.conteudo || ""
+          }));
+        
+        setParticularidades(partProcessed);
+        
+        // Transformar benefícios
+        const benProcessed = beneficiosData.map(b => ({
+          id: b.id,
+          tipo: b.categoria || "Benefício",
+          valor: null,
+          descricao: b.conteudo
+        }));
+        
+        setBeneficios(benProcessed);
+        setLicencas(licencasData || []);
+      } catch (error) {
+        console.error("Erro ao buscar dados da convenção:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchConvencao();
+  }, [id]);
 
   if (loading) {
     return (
@@ -42,47 +231,229 @@ const ConvencaoDetalhes = () => {
 
   const isActive = convencao.vigencia_fim ? new Date() <= new Date(convencao.vigencia_fim) : true;
 
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Não especificada";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("pt-BR");
+  };
+
   return (
     <div className="space-y-6">
-      <ConvencaoDetalhesHeader
-        onVoltar={() => navigate(-1)}
-        titulo={convencao.titulo}
-        numero={convencao.numero}
-        tipo={convencao.tipo}
-        isActive={isActive}
-      />
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+        
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            Baixar PDF
+          </Button>
+          <Button size="sm">
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Ver documento original
+          </Button>
+        </div>
+      </div>
+
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight mb-2">{convencao.titulo}</h1>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Badge variant={isActive ? "default" : "outline"} className="text-xs">
+            {isActive ? "VIGENTE" : "EXPIRADA"}
+          </Badge>
+          <span className="text-sm text-muted-foreground">
+            {convencao.numero} / {convencao.tipo}
+          </span>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Coluna lateral */}
         <div className="space-y-4">
-          <ConvencaoDetalhesInfoCard
-            vigenciaInicio={convencao.vigencia_inicio}
-            vigenciaFim={convencao.vigencia_fim}
-            dataBase={convencao.data_base}
-            sindicato={convencao.sindicato}
-            estado={convencao.estado}
-            fonte={convencao.fonte}
-            valeRefeicao={convencao.vale_refeicao}
-            assistenciaMedica={convencao.assistencia_medica}
-            seguroVida={convencao.seguro_vida}
-            uniforme={convencao.uniforme}
-            formatDate={formatDate}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Informações Gerais</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <div>
+                <div className="flex items-center gap-2 font-medium text-muted-foreground mb-1">
+                  <CalendarDays className="h-4 w-4" />
+                  Vigência
+                </div>
+                <p>
+                  {formatDate(convencao.vigencia_inicio)} até{" "}
+                  {formatDate(convencao.vigencia_fim)}
+                </p>
+              </div>
+              
+              <div>
+                <div className="flex items-center gap-2 font-medium text-muted-foreground mb-1">
+                  <Clock className="h-4 w-4" />
+                  Data Base
+                </div>
+                <p>{formatDate(convencao.data_base)}</p>
+              </div>
+              
+              <div>
+                <p className="font-medium text-muted-foreground mb-2">Sindicatos Participantes</p>
+                <ul className="space-y-2">
+                  {convencao.sindicato && (
+                    <li key={convencao.sindicato.nome} className="text-sm">
+                      <p className="font-medium">{convencao.sindicato.nome}</p>
+                      {convencao.sindicato.cnpj && (
+                        <p className="text-muted-foreground text-xs">CNPJ: {convencao.sindicato.cnpj}</p>
+                      )}
+                      {convencao.sindicato.site && (
+                        <p className="text-muted-foreground text-xs">
+                          <a href={convencao.sindicato.site} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                            {convencao.sindicato.site}
+                          </a>
+                        </p>
+                      )}
+                    </li>
+                  )}
+                </ul>
+              </div>
+              
+              <div>
+                <p className="font-medium text-muted-foreground mb-1">Estado</p>
+                <p>{convencao.estado || "Não especificado"}</p>
+              </div>
+              
+              <div>
+                <p className="font-medium text-muted-foreground mb-1">Fonte</p>
+                <p>{convencao.fonte}</p>
+              </div>
+              
+              {/* Benefícios Resumo */}
+              <div>
+                <p className="font-medium text-muted-foreground mb-2">Benefícios</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span>Vale Refeição:</span>
+                    <span className="font-medium">{convencao.vale_refeicao || "Não especificado"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Assistência Médica:</span>
+                    <span className="font-medium">{convencao.assistencia_medica ? "Sim" : "Não"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Seguro de Vida:</span>
+                    <span className="font-medium">{convencao.seguro_vida ? "Sim" : "Não"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Uniforme:</span>
+                    <span className="font-medium">{convencao.uniforme ? "Sim" : "Não"}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         
+        {/* Conteúdo principal */}
         <div className="col-span-1 md:col-span-2">
-          <ConvencaoDetalhesPisosCard pisosSalariais={pisosSalariais} />
+          {/* Pisos Salariais */}
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-base">Pisos Salariais</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pisosSalariais.length > 0 ? (
+                <DashboardTable 
+                  columns={["Cargo", "Carga Horária", "Piso Salarial", "Hora Normal", "Hora Extra 50%", "Hora Extra 100%"]}
+                  data={pisosSalariais.map(piso => ({
+                    "Cargo": piso.cargo,
+                    "Carga Horária": piso.carga_horaria || "-",
+                    "Piso Salarial": piso.piso_salarial ? `R$ ${piso.piso_salarial.toFixed(2)}` : "-",
+                    "Hora Normal": piso.valor_hora_normal ? `R$ ${piso.valor_hora_normal.toFixed(2)}` : "-",
+                    "Hora Extra 50%": piso.valor_hora_extra_50 ? `R$ ${piso.valor_hora_extra_50.toFixed(2)}` : "-",
+                    "Hora Extra 100%": piso.valor_hora_extra_100 ? `R$ ${piso.valor_hora_extra_100.toFixed(2)}` : "-"
+                  }))}
+                />
+              ) : (
+                <p className="text-center text-muted-foreground py-4">Nenhum piso salarial registrado.</p>
+              )}
+            </CardContent>
+          </Card>
           
-          <ConvencaoDetalhesBeneficiosCard
-            beneficios={beneficios}
-            valeRefeicao={convencao.vale_refeicao}
-            valeRefeicaoValor={convencao.vale_refeicao_valor}
-            assistenciaMedica={convencao.assistencia_medica}
-            seguroVida={convencao.seguro_vida}
-            uniforme={convencao.uniforme}
-            adicionalNoturno={convencao.adicional_noturno}
-          />
+          {/* Benefícios Detalhados */}
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-base">Benefícios</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {beneficios.length > 0 ? (
+                <DashboardTable 
+                  columns={["Tipo", "Valor", "Descrição"]}
+                  data={beneficios.map(beneficio => ({
+                    "Tipo": beneficio.tipo,
+                    "Valor": beneficio.valor || "-",
+                    "Descrição": beneficio.descricao || "-"
+                  }))}
+                />
+              ) : (
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Benefícios Resumidos:</h3>
+                  <ul className="list-disc list-inside space-y-1">
+                    {convencao.vale_refeicao && (
+                      <li>Vale Refeição: {convencao.vale_refeicao} 
+                        {convencao.vale_refeicao_valor ? ` (R$ ${convencao.vale_refeicao_valor.toFixed(2)})` : ''}
+                      </li>
+                    )}
+                    {convencao.assistencia_medica && <li>Assistência Médica</li>}
+                    {convencao.seguro_vida && <li>Seguro de Vida</li>}
+                    {convencao.uniforme && <li>Uniforme</li>}
+                    {convencao.adicional_noturno && <li>Adicional Noturno: {convencao.adicional_noturno}</li>}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
           
-          <ConvencaoDetalhesParticularidadesCard particularidades={particularidades} />
+          {/* Licenças */}
+          {licencas.length > 0 && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle className="text-base">Licenças</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DashboardTable 
+                  columns={["Tipo", "Dias", "Descrição"]}
+                  data={licencas.map(licenca => ({
+                    "Tipo": licenca.tipo,
+                    "Dias": licenca.dias ? licenca.dias.toString() : "-",
+                    "Descrição": licenca.descricao || "-"
+                  }))}
+                />
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Particularidades */}
+          {particularidades.length > 0 && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle className="text-base">Particularidades</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {particularidades.map((item, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="text-primary font-bold">•</span>
+                      <span>{item.descricao}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
