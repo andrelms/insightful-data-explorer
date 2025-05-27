@@ -57,7 +57,7 @@ export const useSindicatosData = () => {
 
         const convenioIds = convenios.map(c => c.id);
 
-        // Buscar TODOS os cargos dos convenios (incluindo duplicados) - REMOVENDO DISTINCT
+        // Buscar TODOS os cargos dos convenios (incluindo duplicados)
         const { data: cargos } = await supabase
           .from('cargos')
           .select(`
@@ -68,7 +68,7 @@ export const useSindicatosData = () => {
           `)
           .in('convenio_id', convenioIds);
 
-        // Buscar beneficios gerais dos convenios (excluindo qualquer referência a 'site')
+        // Buscar beneficios gerais dos convenios (excluindo tipo 'site')
         const { data: beneficios } = await supabase
           .from('beneficios_gerais')
           .select(`
@@ -78,8 +78,8 @@ export const useSindicatosData = () => {
             descricao
           `)
           .in('convenio_id', convenioIds)
-          .not('tipo', 'ilike', '%site%')
-          .not('nome', 'ilike', '%site%');
+          .neq('tipo', 'site')
+          .neq('nome', 'site'); // Filtrar tanto tipo quanto nome
 
         // Buscar particularidades
         const { data: particularidades } = await supabase

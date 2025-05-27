@@ -6,12 +6,9 @@ interface BeneficiosTableProps {
 }
 
 export const BeneficiosTable = ({ beneficios }: BeneficiosTableProps) => {
-  // Filtrar benefícios para remover completamente qualquer referência a 'site'
+  // Filtrar benefícios para remover o tipo 'site'
   const beneficiosFiltrados = beneficios.filter(beneficio => 
-    beneficio.tipo?.toLowerCase() !== 'site' && 
-    beneficio.nome?.toLowerCase() !== 'site' &&
-    !beneficio.tipo?.toLowerCase().includes('site') &&
-    !beneficio.nome?.toLowerCase().includes('site')
+    beneficio.tipo !== 'site' && beneficio.nome !== 'site'
   );
 
   if (beneficiosFiltrados.length === 0) {

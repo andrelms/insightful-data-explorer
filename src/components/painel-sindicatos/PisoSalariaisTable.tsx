@@ -14,7 +14,7 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
     }).format(value);
   };
 
-  // Criar colunas dinâmicas para pisos salariais baseadas nas descrições únicas
+  // Criar colunas dinâmicas para pisos salariais baseadas nas descrições
   const criarColunasPisosSalariais = (cargos: CargoData[]) => {
     const descricoesUnicas = new Set<string>();
     cargos.forEach(cargo => {
@@ -22,11 +22,10 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
         descricoesUnicas.add(cargo.piso_descricao);
       }
     });
-    return Array.from(descricoesUnicas).sort();
+    return Array.from(descricoesUnicas);
   };
 
   const descricoesUnicas = criarColunasPisosSalariais(cargos);
-  const temCBO = cargos.some(cargo => cargo.cbo);
 
   return (
     <div className="space-y-2">
@@ -43,14 +42,14 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
               {descricoesUnicas.map(desc => (
                 <th key={desc} className="p-2 border bg-muted text-xs uppercase">{desc}</th>
               ))}
-              {temCBO && (
+              {cargos.some(cargo => cargo.cbo) && (
                 <th className="p-2 border bg-muted text-xs uppercase">CBO</th>
               )}
             </tr>
           </thead>
           <tbody>
             {cargos.map((cargo, i) => (
-              <tr key={`${cargo.id}-${i}`} className="even:bg-muted/30">
+              <tr key={i} className="even:bg-muted/30">
                 <td className="p-2 border">{cargo.cargo}</td>
                 <td className="p-2 border">{cargo.carga_horaria || '-'}</td>
                 {descricoesUnicas.length === 0 && (
@@ -63,7 +62,7 @@ export const PisoSalariaisTable = ({ cargos }: PisoSalariaisTableProps) => {
                     {cargo.piso_descricao === desc ? formatCurrency(cargo.piso_salarial) : '-'}
                   </td>
                 ))}
-                {temCBO && (
+                {cargos.some(cargo => cargo.cbo) && (
                   <td className="p-2 border">{cargo.cbo || '-'}</td>
                 )}
               </tr>
