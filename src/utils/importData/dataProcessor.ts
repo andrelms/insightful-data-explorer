@@ -65,6 +65,7 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
       .insert({
         descricao: titulo,
         sindicato_id: sindicatoId,
+        file_id: context.importId
       })
       .select('id')
       .single();
@@ -102,7 +103,8 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
         .insert({
           cargo: row['CARGO'],
           carga_horaria: row['CARGA HORÁRIA'] || null,
-          convenio_id: convenioId
+          convenio_id: convenioId,
+          file_id: context.importId
         })
         .select('id')
         .single();
@@ -119,6 +121,7 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
         .insert({
           cargo_id: cargoId,
           valor: row['PISO SALARIAL'] ? parseFloat(row['PISO SALARIAL']) : null,
+          file_id: context.importId
         });
         
       // Inserir valores de hora se existirem
@@ -129,7 +132,8 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
             .insert({
               cargo_id: cargoId,
               tipo: 'normal',
-              valor: parseFloat(row['VALOR HORA NORMAL'])
+              valor: parseFloat(row['VALOR HORA NORMAL']),
+              file_id: context.importId
             });
         }
         
@@ -139,7 +143,8 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
             .insert({
               cargo_id: cargoId,
               tipo: 'extra_50',
-              valor: parseFloat(row['VALOR HORA EXTRA 50%'])
+              valor: parseFloat(row['VALOR HORA EXTRA 50%']),
+              file_id: context.importId
             });
         }
         
@@ -149,7 +154,8 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
             .insert({
               cargo_id: cargoId,
               tipo: 'extra_100',
-              valor: parseFloat(row['VALOR HORA EXTRA 100%'])
+              valor: parseFloat(row['VALOR HORA EXTRA 100%']),
+              file_id: context.importId
             });
         }
       }
@@ -196,7 +202,8 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
             .from('cargos')
             .insert({
               cargo: 'Geral',
-              convenio_id: convenioId
+              convenio_id: convenioId,
+              file_id: context.importId
             })
             .select('id')
             .single();
@@ -204,13 +211,14 @@ export async function processDataRow(row: any, context: ProcessingContext): Prom
           cargoId = cargoData.id;
         }
         
-        // Now insert the particularidade with the cargo_id
+        // Now insert the particularidade with the cargo_id and file_id
         await supabase
           .from('particularidades')
           .insert({
             cargo_id: cargoId,
             conteudo: particularidade,
-            categoria: 'Geral'
+            categoria: 'Geral',
+            file_id: context.importId
           });
         
         // Add to processed list

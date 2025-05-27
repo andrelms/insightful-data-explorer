@@ -33,6 +33,7 @@ interface SindicatoData {
   particularidades: ParticularidadeData[];
   valoresHora: ValorHoraData[];
   jornadas: JornadaData[];
+  pisosSalariais: PisoSalarialData[];
 }
 
 interface CargoData {
@@ -40,10 +41,10 @@ interface CargoData {
   cargo: string;
   carga_horaria: string | null;
   cbo: string | null;
-  pisos_salariais: PisoSalarialData[];
 }
 
 interface PisoSalarialData {
+  cargo_id: string;
   descricao: string | null;
   valor: number | null;
 }
@@ -96,22 +97,58 @@ const PainelSindicatos = () => {
   const fetchDadosSupabase = async () => {
     setLoading(true);
     try {
-      // Buscar sindicatos com convenios
-      const { data: sindicatos, error: sindicatosError } = await supabase
-        .from('sindicatos')
-        .select(`
-          id,
-          nome,
-          cnpj,
-          site,
-          data_base,
-          estado
-        `);
+      // Buscar todos os dados em paralelo de uma vez só com joins otimizados
+      const [
+        { data: sindicatos, error: sindicatosError },
+        { data: convenios, error: conveniosError },
+        { data: cargos, error: cargosError },
+        { data: beneficios, error: beneficiosError },
+        { data: particularidades, error: particularidadesError },
+        { data: valoresHora, error: valoresHoraError },
+        { data: jornadas, error: jornadasError },
+        { data: pisosSalariais, error: pisosSalariaisError }
+      ] = await Promise.all([
+        supabase
+          .from('sindicatos')
+          .select('id, nome, cnpj, site, data_base, estado'),
+        
+        supabase
+          .from('convenios')
+          .select('id, sindicato_id, vigencia_inicio, vigencia_fim'),
+        
+        supabase
+          .from('cargos')
+          .select('id, cargo, carga_horaria, cbo, convenio_id'),
+        
+        supabase
+          .from('beneficios_gerais')
+          .select('tipo, nome, valor, descricao, categoria, convenio_id'),
+        
+        supabase
+          .from('particularidades')
+          .select('categoria, conteudo, convenio_id'),
+        
+        supabase
+          .from('valores_hora')
+          .select('cargo_id, descricao, valor'),
+        
+        supabase
+          .from('jornada_cargo')
+          .select('cargo_id, carga_horaria, valor, unidade'),
+        
+        supabase
+          .from('piso_salarial')
+          .select('cargo_id, descricao, valor')
+      ]);
 
-      if (sindicatosError) {
-        console.error('Erro ao buscar sindicatos:', sindicatosError);
-        return;
-      }
+      if (sindicatosError) throw sindicatosError;
+      if (conveniosError) throw conveniosError;
+      if (cargosError) throw cargosError;
+      if (beneficiosError) throw beneficiosError;
+      if (particularidadesError) throw particularidadesError;
+      if (valoresHoraError) throw valoresHoraError;
+      if (jornadasError) throw jornadasError;
+      if (pisosSalariaisError) throw pisosSalariaisError;
 
       if (!sindicatos || sindicatos.length === 0) {
         setDados([]);
@@ -119,121 +156,121 @@ const PainelSindicatos = () => {
         return;
       }
 
-      const sindicatosCompletos: SindicatoData[] = [];
-
-      for (const sindicato of sindicatos) {
-        // Buscar convenios do sindicato
-        const { data: convenios } = await supabase
-          .from('convenios')
-          .select('id, vigencia_inicio, vigencia_fim')
-          .eq('sindicato_id', sindicato.id);
-
-        if (!convenios || convenios.length === 0) {
-          sindicatosCompletos.push({
-            ...sindicato,
-            vigencia_inicio: null,
-            vigencia_fim: null,
-            cargos: [],
-            beneficios: [],
-            particularidades: [],
-            valoresHora: [],
-            jornadas: []
-          });
-          continue;
+      // Criar maps para lookup rápido
+      const conveniosMap = new Map();
+      convenios?.forEach(convenio => {
+        if (!conveniosMap.has(convenio.sindicato_id)) {
+          conveniosMap.set(convenio.sindicato_id, []);
         }
+        conveniosMap.get(convenio.sindicato_id).push(convenio);
+      });
 
-        const convenioIds = convenios.map(c => c.id);
-        const vigencia = convenios[0]; // Pegar a primeira vigência
+      const cargosMap = new Map();
+      cargos?.forEach(cargo => {
+        if (!cargosMap.has(cargo.convenio_id)) {
+          cargosMap.set(cargo.convenio_id, []);
+        }
+        cargosMap.get(cargo.convenio_id).push(cargo);
+      });
 
-        // Buscar cargos dos convenios
-        const { data: cargos } = await supabase
-          .from('cargos')
-          .select(`
-            id,
-            cargo,
-            carga_horaria,
-            cbo
-          `)
-          .in('convenio_id', convenioIds);
+      const beneficiosMap = new Map();
+      beneficios?.forEach(beneficio => {
+        if (!beneficiosMap.has(beneficio.convenio_id)) {
+          beneficiosMap.set(beneficio.convenio_id, []);
+        }
+        beneficiosMap.get(beneficio.convenio_id).push(beneficio);
+      });
 
-        // Buscar beneficios gerais dos convenios
-        const { data: beneficios } = await supabase
-          .from('beneficios_gerais')
-          .select(`
-            tipo,
-            nome,
-            valor,
-            descricao,
-            categoria
-          `)
-          .in('convenio_id', convenioIds);
+      const particularidadesMap = new Map();
+      particularidades?.forEach(part => {
+        if (!particularidadesMap.has(part.convenio_id)) {
+          particularidadesMap.set(part.convenio_id, []);
+        }
+        particularidadesMap.get(part.convenio_id).push(part);
+      });
 
-        // Buscar particularidades
-        const { data: particularidades } = await supabase
-          .from('particularidades')
-          .select(`
-            categoria,
-            conteudo
-          `)
-          .in('convenio_id', convenioIds);
+      const valoresHoraMap = new Map();
+      valoresHora?.forEach(vh => {
+        if (!valoresHoraMap.has(vh.cargo_id)) {
+          valoresHoraMap.set(vh.cargo_id, []);
+        }
+        valoresHoraMap.get(vh.cargo_id).push(vh);
+      });
 
-        // Para cada cargo, buscar piso salarial e valores de hora
-        const cargosCompletos: CargoData[] = [];
-        const valoresHoraCompletos: ValorHoraData[] = [];
-        const jornadasCompletas: JornadaData[] = [];
-        
-        if (cargos) {
-          for (const cargo of cargos) {
-            const { data: pisosSalariais } = await supabase
-              .from('piso_salarial')
-              .select('descricao, valor')
-              .eq('cargo_id', cargo.id);
+      const jornadasMap = new Map();
+      jornadas?.forEach(j => {
+        if (!jornadasMap.has(j.cargo_id)) {
+          jornadasMap.set(j.cargo_id, []);
+        }
+        jornadasMap.get(j.cargo_id).push(j);
+      });
 
-            const { data: valoresHora } = await supabase
-              .from('valores_hora')
-              .select(`
-                descricao,
-                valor
-              `)
-              .eq('cargo_id', cargo.id);
+      const pisosSalariaisMap = new Map();
+      pisosSalariais?.forEach(p => {
+        if (!pisosSalariaisMap.has(p.cargo_id)) {
+          pisosSalariaisMap.set(p.cargo_id, []);
+        }
+        pisosSalariaisMap.get(p.cargo_id).push(p);
+      });
 
-            const { data: jornadas } = await supabase
-              .from('jornada_cargo')
-              .select(`
-                carga_horaria,
-                valor,
-                unidade
-              `)
-              .eq('cargo_id', cargo.id);
+      // Processar sindicatos
+      const sindicatosCompletos: SindicatoData[] = sindicatos.map(sindicato => {
+        const sindicatoConvenios = conveniosMap.get(sindicato.id) || [];
+        const vigencia = sindicatoConvenios[0]; // Pegar a primeira vigência
 
-            cargosCompletos.push({
-              ...cargo,
-              pisos_salariais: pisosSalariais || []
+        // Buscar cargos de todos os convenios deste sindicato
+        const allCargos: CargoData[] = [];
+        const allBeneficios: BeneficioData[] = [];
+        const allParticularidades: ParticularidadeData[] = [];
+        const allValoresHora: ValorHoraData[] = [];
+        const allJornadas: JornadaData[] = [];
+        const allPisosSalariais: PisoSalarialData[] = [];
+
+        sindicatoConvenios.forEach(convenio => {
+          // Cargos
+          const conveniosCargos = cargosMap.get(convenio.id) || [];
+          allCargos.push(...conveniosCargos);
+
+          // Benefícios
+          const convenioBeneficios = beneficiosMap.get(convenio.id) || [];
+          allBeneficios.push(...convenioBeneficios);
+
+          // Particularidades
+          const convenioParticularidades = particularidadesMap.get(convenio.id) || [];
+          allParticularidades.push(...convenioParticularidades);
+
+          // Para cada cargo, buscar valores hora, jornadas e pisos
+          conveniosCargos.forEach(cargo => {
+            const cargoValoresHora = valoresHoraMap.get(cargo.id) || [];
+            cargoValoresHora.forEach(vh => {
+              allValoresHora.push({
+                cargo_id: cargo.id,
+                cargo: cargo.cargo,
+                descricao: vh.descricao,
+                valor: vh.valor
+              });
             });
 
-            if (valoresHora) {
-              valoresHora.forEach(vh => {
-                valoresHoraCompletos.push({
-                  cargo_id: cargo.id,
-                  cargo: cargo.cargo,
-                  descricao: vh.descricao,
-                  valor: vh.valor
-                });
+            const cargoJornadas = jornadasMap.get(cargo.id) || [];
+            cargoJornadas.forEach(j => {
+              allJornadas.push({
+                cargo_id: cargo.id,
+                carga_horaria: j.carga_horaria,
+                valor: j.valor,
+                unidade: j.unidade
               });
-            }
+            });
 
-            if (jornadas) {
-              jornadas.forEach(j => {
-                jornadasCompletas.push({
-                  cargo_id: cargo.id,
-                  carga_horaria: j.carga_horaria,
-                  valor: j.valor,
-                  unidade: j.unidade
-                });
+            const cargoPisos = pisosSalariaisMap.get(cargo.id) || [];
+            cargoPisos.forEach(p => {
+              allPisosSalariais.push({
+                cargo_id: cargo.id,
+                descricao: p.descricao,
+                valor: p.valor
               });
-            }
-          }
-        }
+            });
+          });
+        });
 
         // Extrair estado do sindicato
         let estadoSigla = sindicato.estado;
@@ -246,18 +283,19 @@ const PainelSindicatos = () => {
           estadoSigla = match ? match[1] : null;
         }
 
-        sindicatosCompletos.push({
+        return {
           ...sindicato,
           estado: estadoSigla,
-          vigencia_inicio: vigencia.vigencia_inicio,
-          vigencia_fim: vigencia.vigencia_fim,
-          cargos: cargosCompletos,
-          beneficios: beneficios || [],
-          particularidades: particularidades || [],
-          valoresHora: valoresHoraCompletos,
-          jornadas: jornadasCompletas
-        });
-      }
+          vigencia_inicio: vigencia?.vigencia_inicio,
+          vigencia_fim: vigencia?.vigencia_fim,
+          cargos: allCargos,
+          beneficios: allBeneficios,
+          particularidades: allParticularidades,
+          valoresHora: allValoresHora,
+          jornadas: allJornadas,
+          pisosSalariais: allPisosSalariais
+        };
+      });
 
       // Agrupar sindicatos por estado
       const estadosMap: {[key: string]: SindicatoData[]} = {};
@@ -484,6 +522,7 @@ const PainelSindicatos = () => {
                                 <div className="space-y-3">
                                   {sindicato.cargos.map((cargo, i) => {
                                     const jornadasCargo = sindicato.jornadas.filter(j => j.cargo_id === cargo.id);
+                                    const pisosCargo = sindicato.pisosSalariais.filter(p => p.cargo_id === cargo.id);
                                     
                                     return (
                                       <div key={i} className="bg-muted/20 p-3 rounded border">
@@ -504,11 +543,11 @@ const PainelSindicatos = () => {
                                         )}
                                         
                                         {/* Pisos Salariais Pivotados */}
-                                        {cargo.pisos_salariais.length > 0 && (
+                                        {pisosCargo.length > 0 && (
                                           <div>
                                             <div className="text-xs font-medium text-muted-foreground mb-1">Pisos Salariais</div>
                                             <div className="flex flex-wrap gap-2">
-                                              {cargo.pisos_salariais.map((piso, idx) => (
+                                              {pisosCargo.map((piso, idx) => (
                                                 <div key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
                                                   <span className="font-medium">{piso.descricao || 'Piso'}: </span>
                                                   {formatCurrency(piso.valor)}
@@ -524,7 +563,7 @@ const PainelSindicatos = () => {
                               </div>
                             )}
 
-                            {/* Valores Hora */}
+                            {/* Valores Hora Pivotados */}
                             {sindicato.valoresHora && sindicato.valoresHora.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Valores Hora</h4>
@@ -551,7 +590,7 @@ const PainelSindicatos = () => {
                               </div>
                             )}
 
-                            {/* Benefícios */}
+                            {/* Benefícios Agrupados por Categoria */}
                             {sindicato.beneficios && sindicato.beneficios.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
@@ -573,7 +612,7 @@ const PainelSindicatos = () => {
                               </div>
                             )}
 
-                            {/* Particularidades */}
+                            {/* Particularidades Agrupadas por Categoria */}
                             {sindicato.particularidades && sindicato.particularidades.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Particularidades</h4>
