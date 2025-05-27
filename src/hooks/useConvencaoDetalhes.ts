@@ -33,6 +33,7 @@ interface PisoSalarial {
   carga_horaria: string | null;
   piso_salarial: number | null;
   piso_descricao?: string | null;
+  cbo?: string | null;
   valor_hora_normal: number | null;
   valor_hora_extra_50: number | null;
   valor_hora_extra_100: number | null;
@@ -75,11 +76,11 @@ export function useConvencaoDetalhes(id: string | undefined) {
           
         if (convencaoError) throw convencaoError;
         
-        // Buscar TODOS os cargos dessa convenção
+        // Buscar TODOS os cargos dessa convenção (incluindo duplicados)
         const { data: cargosData, error: cargosError } = await supabase
           .from('cargos')
           .select(`
-            id, cargo, carga_horaria
+            id, cargo, carga_horaria, cbo
           `)
           .eq('convenio_id', id);
 
@@ -119,6 +120,7 @@ export function useConvencaoDetalhes(id: string | undefined) {
               id: cargo.id,
               cargo: cargo.cargo || "Não especificado",
               carga_horaria: cargo.carga_horaria,
+              cbo: cargo.cbo,
               piso_salarial: pisoData?.valor || null,
               piso_descricao: pisoData?.descricao || null,
               valor_hora_normal: valorHoraNormal,
@@ -136,13 +138,13 @@ export function useConvencaoDetalhes(id: string | undefined) {
           
         if (particularidadesError) throw particularidadesError;
         
-        // Buscar benefícios gerais (excluindo 'site')
+        // Buscar benefícios gerais (excluindo qualquer referência a 'site')
         const { data: beneficiosData, error: beneficiosError } = await supabase
           .from('beneficios_gerais')
           .select('*')
           .eq('convenio_id', id)
-          .neq('tipo', 'site')
-          .neq('nome', 'site');
+          .not('tipo', 'ilike', '%site%')
+          .not('nome', 'ilike', '%site%');
           
         if (beneficiosError) throw beneficiosError;
         
