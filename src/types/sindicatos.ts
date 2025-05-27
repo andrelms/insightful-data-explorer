@@ -32,7 +32,6 @@ export interface BeneficioData {
   nome: string;
   valor: string | null;
   descricao: string | null;
-  sugestao_particularidade?: string | null;
 }
 
 export interface ParticularidadeData {
