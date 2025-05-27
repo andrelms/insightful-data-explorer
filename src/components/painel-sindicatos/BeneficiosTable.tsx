@@ -6,10 +6,17 @@ interface BeneficiosTableProps {
 }
 
 export const BeneficiosTable = ({ beneficios }: BeneficiosTableProps) => {
-  // Filtrar benefícios removendo os que contêm "site" no tipo
+  // Filtrar benefícios para remover completamente qualquer referência a 'site'
   const beneficiosFiltrados = beneficios.filter(beneficio => 
-    beneficio.tipo?.toLowerCase() !== 'site'
+    beneficio.tipo?.toLowerCase() !== 'site' && 
+    beneficio.nome?.toLowerCase() !== 'site' &&
+    !beneficio.tipo?.toLowerCase().includes('site') &&
+    !beneficio.nome?.toLowerCase().includes('site')
   );
+
+  if (beneficiosFiltrados.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-2">
@@ -20,7 +27,6 @@ export const BeneficiosTable = ({ beneficios }: BeneficiosTableProps) => {
             <tr>
               <th className="p-2 border bg-muted text-xs uppercase">Benefício</th>
               <th className="p-2 border bg-muted text-xs uppercase">Valor</th>
-              <th className="p-2 border bg-muted text-xs uppercase">Sugestão</th>
             </tr>
           </thead>
           <tbody>
@@ -28,7 +34,6 @@ export const BeneficiosTable = ({ beneficios }: BeneficiosTableProps) => {
               <tr key={i} className="even:bg-muted/30">
                 <td className="p-2 border">{beneficio.tipo || beneficio.nome}</td>
                 <td className="p-2 border">{beneficio.valor || beneficio.descricao || '-'}</td>
-                <td className="p-2 border">{beneficio.sugestao_particularidade || '-'}</td>
               </tr>
             ))}
           </tbody>

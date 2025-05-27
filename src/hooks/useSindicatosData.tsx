@@ -57,7 +57,7 @@ export const useSindicatosData = () => {
 
         const convenioIds = convenios.map(c => c.id);
 
-        // Buscar cargos dos convenios (incluindo duplicados)
+        // Buscar TODOS os cargos dos convenios (incluindo duplicados) - REMOVENDO DISTINCT
         const { data: cargos } = await supabase
           .from('cargos')
           .select(`
@@ -68,7 +68,7 @@ export const useSindicatosData = () => {
           `)
           .in('convenio_id', convenioIds);
 
-        // Buscar beneficios gerais dos convenios (excluindo tipo 'site')
+        // Buscar beneficios gerais dos convenios (excluindo qualquer referência a 'site')
         const { data: beneficios } = await supabase
           .from('beneficios_gerais')
           .select(`
@@ -78,30 +78,8 @@ export const useSindicatosData = () => {
             descricao
           `)
           .in('convenio_id', convenioIds)
-          .neq('tipo', 'site'); // Excluir tipo 'site'
-
-        // Buscar sugestões de particularidades das anotações relacionadas aos benefícios
-        let beneficiosComSugestoes = beneficios || [];
-        if (beneficios && beneficios.length > 0) {
-          const { data: anotacoes } = await supabase
-            .from('anotacoes')
-            .select('sugestao_particularidade, campo_formatado')
-            .in('convenio_id', convenioIds)
-            .not('sugestao_particularidade', 'is', null);
-
-          // Mapear sugestões para os benefícios baseado no campo_formatado
-          beneficiosComSugestoes = beneficios.map(beneficio => {
-            const anotacaoRelacionada = anotacoes?.find(anotacao => 
-              anotacao.campo_formatado?.toLowerCase().includes(beneficio.tipo?.toLowerCase() || '') ||
-              anotacao.campo_formatado?.toLowerCase().includes(beneficio.nome?.toLowerCase() || '')
-            );
-            
-            return {
-              ...beneficio,
-              sugestao_particularidade: anotacaoRelacionada?.sugestao_particularidade || null
-            };
-          });
-        }
+          .not('tipo', 'ilike', '%site%')
+          .not('nome', 'ilike', '%site%');
 
         // Buscar particularidades
         const { data: particularidades } = await supabase
@@ -156,7 +134,10 @@ export const useSindicatosData = () => {
           ...sindicato,
           estado: estadoSigla,
           cargos: cargosCompletos,
-          beneficios: beneficiosComSugestoes,
+          beneficios: beneficios?.map(b => ({
+            ...b,
+            origem: undefined // Remove origem property
+          })) || [],
           particularidades: particularidades || []
         });
       }
