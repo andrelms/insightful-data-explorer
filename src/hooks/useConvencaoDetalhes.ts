@@ -40,9 +40,7 @@ interface PisoSalarial {
 
 interface Particularidade {
   id: string;
-  categoria?: string;
-  conteudo?: string;
-  descricao?: string;
+  descricao: string;
 }
 
 interface Beneficio {
@@ -173,14 +171,12 @@ export function useConvencaoDetalhes(id: string | undefined) {
         
         setPisosSalariais(pisosProcessed);
         
-        // Transformar particularidades
+        // Transformar particularidades - garantir que descricao seja sempre uma string
         const partProcessed = (particularidadesData || [])
           .filter(p => p.categoria !== 'benefício')
           .map(p => ({
             id: p.id,
-            categoria: p.categoria,
-            conteudo: p.conteudo,
-            descricao: p.conteudo || ""
+            descricao: p.conteudo || p.descricao || "Sem descrição"
           }));
         
         setParticularidades(partProcessed);
