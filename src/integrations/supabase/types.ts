@@ -20,7 +20,7 @@ export type Database = {
           convenio_id: string | null
           created_at: string | null
           extra_detectado: boolean | null
-          file_id: string | null
+          file_id: string
           id: string
           linha: number | null
           registro_idx: number | null
@@ -39,7 +39,7 @@ export type Database = {
           convenio_id?: string | null
           created_at?: string | null
           extra_detectado?: boolean | null
-          file_id?: string | null
+          file_id: string
           id?: string
           linha?: number | null
           registro_idx?: number | null
@@ -58,7 +58,7 @@ export type Database = {
           convenio_id?: string | null
           created_at?: string | null
           extra_detectado?: boolean | null
-          file_id?: string | null
+          file_id?: string
           id?: string
           linha?: number | null
           registro_idx?: number | null
@@ -97,10 +97,11 @@ export type Database = {
           convenio_id: string | null
           created_at: string | null
           descricao: string | null
-          file_id: string | null
+          file_id: string
           fonte_coluna: string | null
           id: string
           nome: string | null
+          registro_idx: number | null
           tipo: string | null
           updated_at: string | null
           valor: string | null
@@ -110,10 +111,11 @@ export type Database = {
           convenio_id?: string | null
           created_at?: string | null
           descricao?: string | null
-          file_id?: string | null
+          file_id: string
           fonte_coluna?: string | null
           id?: string
           nome?: string | null
+          registro_idx?: number | null
           tipo?: string | null
           updated_at?: string | null
           valor?: string | null
@@ -123,10 +125,11 @@ export type Database = {
           convenio_id?: string | null
           created_at?: string | null
           descricao?: string | null
-          file_id?: string | null
+          file_id?: string
           fonte_coluna?: string | null
           id?: string
           nome?: string | null
+          registro_idx?: number | null
           tipo?: string | null
           updated_at?: string | null
           valor?: string | null
@@ -220,6 +223,7 @@ export type Database = {
           descricao: string | null
           file_id: string | null
           id: string
+          registro_idx: number | null
           sindicato_id: string | null
           updated_at: string | null
           vigencia: string | null
@@ -232,6 +236,7 @@ export type Database = {
           descricao?: string | null
           file_id?: string | null
           id?: string
+          registro_idx?: number | null
           sindicato_id?: string | null
           updated_at?: string | null
           vigencia?: string | null
@@ -244,6 +249,7 @@ export type Database = {
           descricao?: string | null
           file_id?: string | null
           id?: string
+          registro_idx?: number | null
           sindicato_id?: string | null
           updated_at?: string | null
           vigencia?: string | null
@@ -330,6 +336,60 @@ export type Database = {
         }
         Relationships: []
       }
+      jornada_cargo: {
+        Row: {
+          carga_horaria: string | null
+          cargo_id: string | null
+          created_at: string | null
+          file_id: string | null
+          id: string
+          observacao: string | null
+          registro_idx: number | null
+          tipo_jornada: string | null
+          unidade: string
+          valor: number | null
+        }
+        Insert: {
+          carga_horaria?: string | null
+          cargo_id?: string | null
+          created_at?: string | null
+          file_id?: string | null
+          id?: string
+          observacao?: string | null
+          registro_idx?: number | null
+          tipo_jornada?: string | null
+          unidade: string
+          valor?: number | null
+        }
+        Update: {
+          carga_horaria?: string | null
+          cargo_id?: string | null
+          created_at?: string | null
+          file_id?: string | null
+          id?: string
+          observacao?: string | null
+          registro_idx?: number | null
+          tipo_jornada?: string | null
+          unidade?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_cargo_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornada_cargo_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "uploaded_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       particularidades: {
         Row: {
           cargo_id: string | null
@@ -339,9 +399,9 @@ export type Database = {
           created_at: string | null
           descricao: string | null
           detalhe: string | null
-          file_id: string | null
+          file_id: string
           id: string
-          licenca_id: string | null
+          registro_idx: number | null
           updated_at: string | null
         }
         Insert: {
@@ -352,9 +412,9 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           detalhe?: string | null
-          file_id?: string | null
+          file_id: string
           id?: string
-          licenca_id?: string | null
+          registro_idx?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -365,9 +425,9 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           detalhe?: string | null
-          file_id?: string | null
+          file_id?: string
           id?: string
-          licenca_id?: string | null
+          registro_idx?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -394,6 +454,7 @@ export type Database = {
           descricao: string | null
           file_id: string | null
           id: string
+          registro_idx: number | null
           updated_at: string | null
           valor: number | null
         }
@@ -403,6 +464,7 @@ export type Database = {
           descricao?: string | null
           file_id?: string | null
           id?: string
+          registro_idx?: number | null
           updated_at?: string | null
           valor?: number | null
         }
@@ -412,6 +474,7 @@ export type Database = {
           descricao?: string | null
           file_id?: string | null
           id?: string
+          registro_idx?: number | null
           updated_at?: string | null
           valor?: number | null
         }
@@ -472,6 +535,7 @@ export type Database = {
           file_id: string | null
           id: string
           nome: string
+          registro_idx: number | null
           site: string | null
           updated_at: string | null
         }
@@ -483,6 +547,7 @@ export type Database = {
           file_id?: string | null
           id?: string
           nome: string
+          registro_idx?: number | null
           site?: string | null
           updated_at?: string | null
         }
@@ -494,6 +559,7 @@ export type Database = {
           file_id?: string | null
           id?: string
           nome?: string
+          registro_idx?: number | null
           site?: string | null
           updated_at?: string | null
         }
@@ -584,6 +650,7 @@ export type Database = {
           file_id: string | null
           fonte_coluna: string | null
           id: string
+          registro_idx: number | null
           tipo: string | null
           updated_at: string | null
           valor: number | null
@@ -595,6 +662,7 @@ export type Database = {
           file_id?: string | null
           fonte_coluna?: string | null
           id?: string
+          registro_idx?: number | null
           tipo?: string | null
           updated_at?: string | null
           valor?: number | null
@@ -606,6 +674,7 @@ export type Database = {
           file_id?: string | null
           fonte_coluna?: string | null
           id?: string
+          registro_idx?: number | null
           tipo?: string | null
           updated_at?: string | null
           valor?: number | null
