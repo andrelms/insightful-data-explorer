@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -442,9 +441,16 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-6 space-y-6">
+        <div className={cn(
+          "grid gap-6 auto-rows-max",
+          filteredEstados.length === 1 ? "grid-cols-1" :
+          filteredEstados.length === 2 ? "grid-cols-1 md:grid-cols-2" :
+          filteredEstados.length === 3 ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" :
+          filteredEstados.length === 4 ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" :
+          "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+        )}>
           {filteredEstados.map((estado) => (
-            <div key={estado.sigla} className="break-inside-avoid estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
+            <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full flex flex-col">
                 <div className="bg-gradient-to-r from-blue-600 to-violet-600 text-white p-4">
                   <div className="flex items-center gap-2">
