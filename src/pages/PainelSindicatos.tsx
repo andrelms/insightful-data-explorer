@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -76,11 +77,14 @@ interface BeneficioData {
 interface ParticularidadeData {
   categoria: string | null;
   conteudo: string | null;
+  detalhe: string | null;
 }
 
 interface AnotacaoData {
   coluna: string;
   campo_formatado: string;
+  sugestao_particularidade: string | null;
+  registro_idx: number | null;
 }
 
 interface EstadoSindicatos {
@@ -120,11 +124,11 @@ const PainelSindicatos = () => {
         supabase.from('convenios').select('id, sindicato_id, vigencia_inicio, vigencia_fim'),
         supabase.from('cargos').select('id, cargo, carga_horaria, cbo, convenio_id'),
         supabase.from('beneficios_gerais').select('tipo, nome, valor, descricao, categoria, fonte_coluna, registro_idx, convenio_id').order('registro_idx'),
-        supabase.from('particularidades').select('categoria, conteudo, convenio_id'),
+        supabase.from('particularidades').select('categoria, conteudo, detalhe, convenio_id'),
         supabase.from('valores_hora').select('cargo_id, descricao, valor'),
         supabase.from('jornada_cargo').select('cargo_id, carga_horaria, valor, unidade'),
         supabase.from('piso_salarial').select('cargo_id, descricao, valor'),
-        supabase.from('anotacoes').select('convenio_id, coluna, campo_formatado')
+        supabase.from('anotacoes').select('convenio_id, coluna, campo_formatado, sugestao_particularidade, registro_idx')
       ]);
 
       if (sindicatosError) throw sindicatosError;
@@ -362,28 +366,62 @@ const PainelSindicatos = () => {
     }).format(value);
   };
 
-  const groupBeneficiosByColuna = (beneficios: BeneficioData[]) => {
+  const groupBeneficiosBySugestao = (beneficios: BeneficioData[], anotacoes: AnotacaoData[]) => {
     const grouped: {[key: string]: BeneficioData[]} = {};
+    
     beneficios.forEach(beneficio => {
-      const coluna = beneficio.fonte_coluna || 'Outros';
-      if (!grouped[coluna]) {
-        grouped[coluna] = [];
+      // Buscar sugestão de particularidade nas anotações pelo registro_idx
+      const anotacao = anotacoes.find(a => a.registro_idx === beneficio.registro_idx);
+      const sugestao = anotacao?.sugestao_particularidade || 'Outros';
+      
+      if (!grouped[sugestao]) {
+        grouped[sugestao] = [];
       }
-      grouped[coluna].push(beneficio);
+      grouped[sugestao].push(beneficio);
     });
+    
     return grouped;
   };
 
-  const groupParticularidadesByCategoria = (particularidades: ParticularidadeData[]) => {
-    const grouped: {[key: string]: ParticularidadeData[]} = {};
-    particularidades.forEach(part => {
-      const categoria = part.categoria || 'Outros';
-      if (!grouped[categoria]) {
-        grouped[categoria] = [];
-      }
-      grouped[categoria].push(part);
-    });
-    return grouped;
+  const getInformacoesSindicato = (sindicato: SindicatoData) => {
+    const informacoes: { coluna: string; valor: string }[] = [];
+    
+    if (sindicato.site) {
+      informacoes.push({ coluna: 'Site', valor: sindicato.site });
+    }
+    
+    if (sindicato.data_base) {
+      informacoes.push({ coluna: 'Data Base', valor: sindicato.data_base });
+    }
+    
+    if (sindicato.vigencia_inicio) {
+      informacoes.push({ 
+        coluna: 'Vigência Início', 
+        valor: new Date(sindicato.vigencia_inicio).toLocaleDateString('pt-BR') 
+      });
+    }
+    
+    if (sindicato.vigencia_fim) {
+      informacoes.push({ 
+        coluna: 'Vigência Fim', 
+        valor: new Date(sindicato.vigencia_fim).toLocaleDateString('pt-BR') 
+      });
+    }
+    
+    // Se não tem site nem data_base, pegar das anotações apenas essas colunas específicas
+    if (!sindicato.site && !sindicato.data_base && sindicato.anotacoes) {
+      const colunasFiltradas = ['SITE', 'DATA BASE', 'VIGENCIA INICIO', 'VIGENCIA FIM'];
+      sindicato.anotacoes
+        .filter(anotacao => colunasFiltradas.includes(anotacao.coluna.toUpperCase()))
+        .forEach(anotacao => {
+          informacoes.push({ 
+            coluna: anotacao.coluna, 
+            valor: anotacao.campo_formatado 
+          });
+        });
+    }
+    
+    return informacoes;
   };
   
   return (
@@ -441,14 +479,7 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className={cn(
-          "grid gap-6 auto-rows-max",
-          filteredEstados.length === 1 ? "grid-cols-1" :
-          filteredEstados.length === 2 ? "grid-cols-1 md:grid-cols-2" :
-          filteredEstados.length === 3 ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" :
-          filteredEstados.length === 4 ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" :
-          "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-        )}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
           {filteredEstados.map((estado) => (
             <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full flex flex-col">
@@ -492,40 +523,12 @@ const PainelSindicatos = () => {
                             <div className="space-y-2">
                               <h4 className="font-medium text-xs text-accent-foreground">Informações do Sindicato</h4>
                               <div className="grid grid-cols-1 gap-2">
-                                {sindicato.site && (
-                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
-                                    <div className="text-xs font-medium">Site</div>
-                                    <div className="truncate">{sindicato.site}</div>
+                                {getInformacoesSindicato(sindicato).map((info, idx) => (
+                                  <div key={idx} className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                    <div className="text-xs font-medium">{info.coluna}</div>
+                                    <div className="truncate">{info.valor}</div>
                                   </div>
-                                )}
-                                {sindicato.data_base && (
-                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
-                                    <div className="text-xs font-medium">Data Base</div>
-                                    <div>{sindicato.data_base}</div>
-                                  </div>
-                                )}
-                                {!sindicato.site && !sindicato.data_base && sindicato.anotacoes && sindicato.anotacoes.length > 0 && (
-                                  <div className="space-y-1">
-                                    {sindicato.anotacoes.map((anotacao, idx) => (
-                                      <div key={idx} className="bg-muted/30 p-2 rounded border-l-2 border-primary">
-                                        <div className="text-xs font-medium">{anotacao.coluna}</div>
-                                        <div>{anotacao.campo_formatado}</div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                {sindicato.vigencia_inicio && (
-                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
-                                    <div className="text-xs font-medium">Vigência Início</div>
-                                    <div>{new Date(sindicato.vigencia_inicio).toLocaleDateString('pt-BR')}</div>
-                                  </div>
-                                )}
-                                {sindicato.vigencia_fim && (
-                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
-                                    <div className="text-xs font-medium">Vigência Fim</div>
-                                    <div>{new Date(sindicato.vigencia_fim).toLocaleDateString('pt-BR')}</div>
-                                  </div>
-                                )}
+                                ))}
                               </div>
                             </div>
 
@@ -541,12 +544,12 @@ const PainelSindicatos = () => {
                                     <Card key={i} className="bg-muted/10 border border-muted/30">
                                       <CardContent className="p-3">
                                         <div className="grid grid-cols-3 gap-3">
-                                          {/* Cargo */}
+                                          {/* Cargo e Carga Horária */}
                                           <div>
                                             <h5 className="font-medium text-xs text-accent-foreground mb-2">Cargo</h5>
                                             <div className="font-medium text-sm mb-1">{cargo.cargo}</div>
                                             {cargo.cbo && (
-                                              <div className="text-xs text-muted-foreground">CBO: {cargo.cbo}</div>
+                                              <div className="text-xs text-muted-foreground mb-1">CBO: {cargo.cbo}</div>
                                             )}
                                             {jornadasCargo.length > 0 && (
                                               <div className="mt-1">
@@ -603,16 +606,18 @@ const PainelSindicatos = () => {
                               </div>
                             )}
 
-                            {/* Benefícios Agrupados por Coluna */}
+                            {/* Benefícios Agrupados por Sugestão de Particularidade */}
                             {sindicato.beneficios && sindicato.beneficios.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
                                 <div className="space-y-3">
-                                  {Object.entries(groupBeneficiosByColuna(sindicato.beneficios)).map(([coluna, beneficios]) => (
-                                    <div key={coluna} className="bg-muted/20 p-3 rounded border">
-                                      <div className="font-medium text-sm mb-2">Coluna: {coluna}</div>
+                                  {Object.entries(groupBeneficiosBySugestao(sindicato.beneficios, sindicato.anotacoes)).map(([sugestao, beneficios]) => (
+                                    <div key={sugestao} className="bg-muted/20 p-3 rounded border">
+                                      <div className="font-medium text-sm mb-2">{sugestao}</div>
                                       <div className="space-y-1">
-                                        {beneficios.map((beneficio, i) => (
+                                        {beneficios
+                                          .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
+                                          .map((beneficio, i) => (
                                           <div key={i} className="bg-green-100 text-green-800 p-2 rounded text-xs">
                                             <div className="font-medium">{beneficio.tipo} - {beneficio.nome}</div>
                                             <div>{beneficio.valor || beneficio.descricao || '-'}</div>
@@ -625,21 +630,14 @@ const PainelSindicatos = () => {
                               </div>
                             )}
 
-                            {/* Particularidades Agrupadas por Categoria */}
+                            {/* Particularidades usando campo detalhe */}
                             {sindicato.particularidades && sindicato.particularidades.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Particularidades</h4>
-                                <div className="space-y-3">
-                                  {Object.entries(groupParticularidadesByCategoria(sindicato.particularidades)).map(([categoria, particularidades]) => (
-                                    <div key={categoria} className="bg-muted/20 p-3 rounded border">
-                                      <div className="font-medium text-sm mb-2">{categoria}</div>
-                                      <div className="space-y-1">
-                                        {particularidades.map((part, i) => (
-                                          <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-                                            {part.conteudo}
-                                          </div>
-                                        ))}
-                                      </div>
+                                <div className="space-y-1">
+                                  {sindicato.particularidades.map((part, i) => (
+                                    <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
+                                      {part.detalhe || part.conteudo}
                                     </div>
                                   ))}
                                 </div>
