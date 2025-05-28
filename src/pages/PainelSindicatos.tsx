@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ interface SindicatoData {
   valoresHora: ValorHoraData[];
   jornadas: JornadaData[];
   pisosSalariais: PisoSalarialData[];
+  anotacoes: AnotacaoData[];
 }
 
 interface CargoData {
@@ -75,6 +77,11 @@ interface BeneficioData {
 interface ParticularidadeData {
   categoria: string | null;
   conteudo: string | null;
+}
+
+interface AnotacaoData {
+  coluna: string;
+  campo_formatado: string;
 }
 
 interface EstadoSindicatos {
@@ -214,7 +221,7 @@ const PainelSindicatos = () => {
         const allValoresHora: ValorHoraData[] = [];
         const allJornadas: JornadaData[] = [];
         const allPisosSalariais: PisoSalarialData[] = [];
-        const allAnotacoes: any[] = [];
+        const allAnotacoes: AnotacaoData[] = [];
 
         sindicatoConvenios.forEach(convenio => {
           const conveniosCargos = cargosMap.get(convenio.id) || [];
@@ -435,9 +442,9 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 auto-rows-max">
+        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-6 space-y-6">
           {filteredEstados.map((estado) => (
-            <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
+            <div key={estado.sigla} className="break-inside-avoid estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full flex flex-col">
                 <div className="bg-gradient-to-r from-blue-600 to-violet-600 text-white p-4">
                   <div className="flex items-center gap-2">
@@ -510,7 +517,7 @@ const PainelSindicatos = () => {
                                 {sindicato.vigencia_fim && (
                                   <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
                                     <div className="text-xs font-medium">Vigência Fim</div>
-                                    <div>{new Date(sindicicato.vigencia_fim).toLocaleDateString('pt-BR')}</div>
+                                    <div>{new Date(sindicato.vigencia_fim).toLocaleDateString('pt-BR')}</div>
                                   </div>
                                 )}
                               </div>
@@ -597,7 +604,7 @@ const PainelSindicatos = () => {
                                 <div className="space-y-3">
                                   {Object.entries(groupBeneficiosByColuna(sindicato.beneficios)).map(([coluna, beneficios]) => (
                                     <div key={coluna} className="bg-muted/20 p-3 rounded border">
-                                      <div className="font-medium text-sm mb-2">{coluna}</div>
+                                      <div className="font-medium text-sm mb-2">Coluna: {coluna}</div>
                                       <div className="space-y-1">
                                         {beneficios.map((beneficio, i) => (
                                           <div key={i} className="bg-green-100 text-green-800 p-2 rounded text-xs">
