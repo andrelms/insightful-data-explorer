@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, ChevronDown, Info } from "lucide-react";
+import { Search, MapPin, ChevronDown, Info, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Dicionário de siglas dos estados
 const siglas_estados: {[key: string]: string} = {
@@ -97,6 +98,7 @@ const PainelSindicatos = () => {
   const [estadoFilter, setEstadoFilter] = useState("all");
   const [categoriaFilter, setCategoriaFilter] = useState("all");
   const [expandedSindicatos, setExpandedSindicatos] = useState<Record<string, boolean>>({});
+  const [expandedValoresHora, setExpandedValoresHora] = useState<Record<string, boolean>>({});
   const [dados, setDados] = useState<EstadoSindicatos[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -357,6 +359,13 @@ const PainelSindicatos = () => {
     }));
   };
 
+  const toggleValoresHora = (cargoId: string) => {
+    setExpandedValoresHora(prev => ({
+      ...prev,
+      [cargoId]: !prev[cargoId]
+    }));
+  };
+
   const formatCurrency = (value: number | null) => {
     if (!value) return 'N/A';
     return new Intl.NumberFormat('pt-BR', {
@@ -434,14 +443,13 @@ const PainelSindicatos = () => {
     });
   };
 
-  const prepareTableData = (sindicato: SindicatoData) => {
-    // Criar um mapa combinado de dados por cargo
+  const prepareCargoData = (sindicato: SindicatoData) => {
     const cargoDataMap = new Map();
     
-    // Primeiro, coletar todos os cargos
     sindicato.cargos.forEach(cargo => {
       if (!cargoDataMap.has(cargo.id)) {
         cargoDataMap.set(cargo.id, {
+          id: cargo.id,
           cargo: cargo.cargo,
           cbo: cargo.cbo,
           jornadas: [],
@@ -451,64 +459,25 @@ const PainelSindicatos = () => {
       }
     });
     
-    // Adicionar jornadas
     sindicato.jornadas.forEach(jornada => {
       if (cargoDataMap.has(jornada.cargo_id)) {
         cargoDataMap.get(jornada.cargo_id).jornadas.push(jornada);
       }
     });
     
-    // Adicionar pisos
     sindicato.pisosSalariais.forEach(piso => {
       if (cargoDataMap.has(piso.cargo_id)) {
         cargoDataMap.get(piso.cargo_id).pisos.push(piso);
       }
     });
     
-    // Adicionar valores hora
     sindicato.valoresHora.forEach(valor => {
       if (cargoDataMap.has(valor.cargo_id)) {
         cargoDataMap.get(valor.cargo_id).valores.push(valor);
       }
     });
     
-    // Criar lista de linhas para a tabela
-    const tableRows: any[] = [];
-    
-    cargoDataMap.forEach((data, cargoId) => {
-      // Determinar o número máximo de linhas necessárias
-      const maxRows = Math.max(
-        data.jornadas.length || 1,
-        data.pisos.length || 1,
-        data.valores.length || 1
-      );
-      
-      for (let i = 0; i < maxRows; i++) {
-        tableRows.push({
-          cargoId,
-          cargo: i === 0 ? data.cargo : '',
-          cbo: i === 0 ? data.cbo : '',
-          jornada: data.jornadas[i] || null,
-          piso: data.pisos[i] || null,
-          valor: data.valores[i] || null,
-          rowIndex: i
-        });
-      }
-    });
-    
-    // Ordenar por registro_idx como chave secundária
-    return tableRows.sort((a, b) => {
-      // Primeiro por cargo
-      if (a.cargo !== b.cargo && a.cargo && b.cargo) {
-        return a.cargo.localeCompare(b.cargo);
-      }
-      
-      // Depois por registro_idx dos pisos ou jornadas
-      const aRegistroIdx = a.piso?.registro_idx || a.jornada?.registro_idx || 0;
-      const bRegistroIdx = b.piso?.registro_idx || b.jornada?.registro_idx || 0;
-      
-      return aRegistroIdx - bRegistroIdx;
-    });
+    return Array.from(cargoDataMap.values()).sort((a, b) => a.cargo.localeCompare(b.cargo));
   };
   
   return (
@@ -566,7 +535,7 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-max">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredEstados.map((estado) => (
             <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full flex flex-col">
@@ -619,60 +588,69 @@ const PainelSindicatos = () => {
                               </div>
                             </div>
 
-                            {/* Tabela de Cargos, Carga Horária, Pisos Salariais e Valores Hora */}
+                            {/* Cargos e Remuneração */}
                             {sindicato.cargos && sindicato.cargos.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Cargos e Remuneração</h4>
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-xs border-collapse">
-                                    <thead>
-                                      <tr className="bg-muted/20">
-                                        <th className="text-left p-2 border border-muted/30 font-medium">Cargo</th>
-                                        <th className="text-left p-2 border border-muted/30 font-medium">Carga Horária</th>
-                                        <th className="text-left p-2 border border-muted/30 font-medium">Piso Salarial</th>
-                                        <th className="text-left p-2 border border-muted/30 font-medium">Valor Hora</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {prepareTableData(sindicato).map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-muted/10">
-                                          <td className="p-2 border border-muted/30">
-                                            {row.cargo && (
-                                              <div>
-                                                <div className="font-medium">{row.cargo}</div>
-                                                {row.cbo && (
-                                                  <div className="text-xs text-muted-foreground">CBO: {row.cbo}</div>
-                                                )}
-                                              </div>
-                                            )}
-                                          </td>
-                                          <td className="p-2 border border-muted/30">
-                                            {row.jornada && (
-                                              <div className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs">
-                                                {row.jornada.valor} {row.jornada.unidade}
-                                              </div>
-                                            )}
-                                          </td>
-                                          <td className="p-2 border border-muted/30">
-                                            {row.piso && (
-                                              <div className="bg-green-100 text-green-800 px-1 py-0.5 rounded text-xs">
-                                                <div className="font-medium">{row.piso.descricao || 'Piso'}</div>
-                                                <div>{formatCurrency(row.piso.valor)}</div>
-                                              </div>
-                                            )}
-                                          </td>
-                                          <td className="p-2 border border-muted/30">
-                                            {row.valor && (
-                                              <div className="bg-orange-100 text-orange-800 px-1 py-0.5 rounded text-xs">
-                                                <div className="font-medium">{row.valor.descricao || 'Valor'}</div>
-                                                <div>{formatCurrency(row.valor.valor)}</div>
-                                              </div>
-                                            )}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                <div className="space-y-3">
+                                  {prepareCargoData(sindicato).map((cargoData) => (
+                                    <div key={cargoData.id} className="bg-muted/20 p-3 rounded border">
+                                      {/* Cargo Info */}
+                                      <div className="mb-3">
+                                        <div className="font-medium text-sm">{cargoData.cargo}</div>
+                                        {cargoData.cbo && (
+                                          <div className="text-xs text-muted-foreground">CBO: {cargoData.cbo}</div>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Carga Horária e Piso Salarial lado a lado */}
+                                      <div className="grid grid-cols-2 gap-2 mb-2">
+                                        <div>
+                                          <div className="text-xs font-medium mb-1">Carga Horária</div>
+                                          {cargoData.jornadas.map((jornada, idx) => (
+                                            <div key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mb-1">
+                                              {jornada.valor} {jornada.unidade}
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <div>
+                                          <div className="text-xs font-medium mb-1">Piso Salarial</div>
+                                          {cargoData.pisos.map((piso, idx) => (
+                                            <div key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs mb-1">
+                                              <div className="font-medium">{piso.descricao || 'Piso'}</div>
+                                              <div>{formatCurrency(piso.valor)}</div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Valores Hora - Collapsible horizontal */}
+                                      {cargoData.valores.length > 0 && (
+                                        <Collapsible 
+                                          open={expandedValoresHora[cargoData.id]} 
+                                          onOpenChange={() => toggleValoresHora(cargoData.id)}
+                                        >
+                                          <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium hover:text-primary w-full text-left">
+                                            <ChevronRight className={cn(
+                                              "h-3 w-3 transition-transform",
+                                              expandedValoresHora[cargoData.id] && "transform rotate-90"
+                                            )} />
+                                            Valores Hora ({cargoData.valores.length})
+                                          </CollapsibleTrigger>
+                                          <CollapsibleContent className="mt-2">
+                                            <div className="flex flex-wrap gap-2">
+                                              {cargoData.valores.map((valor, idx) => (
+                                                <div key={idx} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                                                  <div className="font-medium">{valor.descricao || 'Valor'}</div>
+                                                  <div>{formatCurrency(valor.valor)}</div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </CollapsibleContent>
+                                        </Collapsible>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
@@ -705,10 +683,11 @@ const PainelSindicatos = () => {
                             {sindicato.particularidades && sindicato.particularidades.length > 0 && (
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Particularidades</h4>
-                                <div className="space-y-1">
+                                <div className="space-y-2">
                                   {sindicato.particularidades.map((part, i) => (
                                     <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-                                      {part.detalhe || part.conteudo}
+                                      <div className="font-medium">{part.detalhe}</div>
+                                      {part.conteudo && <div className="mt-1">{part.conteudo}</div>}
                                     </div>
                                   ))}
                                 </div>
