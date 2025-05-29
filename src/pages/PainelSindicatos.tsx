@@ -78,6 +78,7 @@ interface ParticularidadeData {
   categoria: string | null;
   conteudo: string | null;
   detalhe: string | null;
+  registro_idx: number | null;
 }
 
 interface AnotacaoData {
@@ -125,7 +126,7 @@ const PainelSindicatos = () => {
         supabase.from('convenios').select('id, sindicato_id, vigencia_inicio, vigencia_fim'),
         supabase.from('cargos').select('id, cargo, carga_horaria, cbo, convenio_id'),
         supabase.from('beneficios_gerais').select('tipo, nome, valor, descricao, categoria, fonte_coluna, registro_idx, convenio_id').order('registro_idx'),
-        supabase.from('particularidades').select('categoria, conteudo, detalhe, convenio_id'),
+        supabase.from('particularidades').select('categoria, conteudo, detalhe, registro_idx, convenio_id'),
         supabase.from('valores_hora').select('cargo_id, descricao, valor'),
         supabase.from('jornada_cargo').select('cargo_id, carga_horaria, valor, unidade'),
         supabase.from('piso_salarial').select('cargo_id, descricao, valor'),
