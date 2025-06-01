@@ -41,7 +41,7 @@ export default function PainelSindicatos() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className="container mx-auto px-4 py-6 space-y-6 min-h-screen">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">Painel de Sindicatos</h1>
         <p className="text-muted-foreground">
@@ -67,10 +67,21 @@ export default function PainelSindicatos() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
-          {filteredDados.map((estado, index) => (
-            <EstadoCard key={estado.sigla} estado={estado} />
-          ))}
+        <div className="w-full">
+          {/* Grid responsivo que se adapta ao número de itens filtrados */}
+          <div 
+            className={`
+              grid gap-6 w-full
+              ${filteredDados.length === 1 ? 'grid-cols-1 max-w-4xl mx-auto' : ''}
+              ${filteredDados.length === 2 ? 'grid-cols-1 lg:grid-cols-2 max-w-6xl mx-auto' : ''}
+              ${filteredDados.length === 3 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : ''}
+              ${filteredDados.length >= 4 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4' : ''}
+            `}
+          >
+            {filteredDados.map((estado, index) => (
+              <EstadoCard key={estado.sigla} estado={estado} />
+            ))}
+          </div>
         </div>
       )}
     </div>
