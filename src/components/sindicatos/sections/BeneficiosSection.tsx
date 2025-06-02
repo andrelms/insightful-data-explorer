@@ -24,11 +24,11 @@ export function BeneficiosSection({ beneficios, anotacoes }: BeneficiosSectionPr
     return acc;
   }, {} as Record<string, BeneficioData[]>);
 
-  // Função para obter sugestão de particularidade da anotação pelo registro_idx
-  const getSugestaoParticularidade = (registroIdx: number | null) => {
+  // Função para obter dados da anotação pelo registro_idx
+  const getAnotacaoData = (registroIdx: number | null) => {
     if (!registroIdx) return null;
     const anotacao = anotacoes.find(a => a.registro_idx === registroIdx);
-    return anotacao?.sugestao_particularidade || null;
+    return anotacao || null;
   };
 
   const totalBeneficios = beneficios.length;
@@ -45,32 +45,38 @@ export function BeneficiosSection({ beneficios, anotacoes }: BeneficiosSectionPr
       
       <CollapsibleContent className="space-y-3 mt-2">
         {Object.entries(beneficiosPorTipo).map(([tipo, beneficiosList]) => (
-          <div key={tipo} className="bg-muted/20 p-3 rounded border">
+          <div key={tipo} className="bg-muted/20 p-3 rounded-lg border">
             <div className="font-medium text-sm mb-2 text-primary">{tipo}</div>
             <div className="space-y-2">
               {beneficiosList
                 .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
                 .map((beneficio, i) => {
-                  const sugestaoParticularidade = getSugestaoParticularidade(beneficio.registro_idx);
+                  const anotacaoData = getAnotacaoData(beneficio.registro_idx);
                   
                   return (
-                    <div key={i} className="bg-green-100 text-green-800 p-3 rounded border border-green-200">
+                    <div key={i} className="bg-green-50 text-green-800 p-3 rounded-lg border border-green-200">
                       {/* Nome/Descrição do benefício */}
                       <div className="font-medium text-sm mb-2">
                         {beneficio.nome || beneficio.descricao || 'Benefício'}
                       </div>
                       
                       {/* Sugestão de Particularidade da Anotação */}
-                      {sugestaoParticularidade && (
-                        <div className="text-xs mb-2 p-2 bg-blue-50 border border-blue-200 rounded">
-                          <span className="font-medium">Particularidade: </span>
-                          {sugestaoParticularidade}
+                      {anotacaoData?.sugestao_particularidade && (
+                        <div className="text-xs mb-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                          {anotacaoData.sugestao_particularidade}
                         </div>
                       )}
                       
-                      {/* Valor do benefício - removendo o termo "Valor:" */}
+                      {/* Campo Formatado da Anotação */}
+                      {anotacaoData?.campo_formatado && (
+                        <div className="text-xs mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          {anotacaoData.campo_formatado}
+                        </div>
+                      )}
+                      
+                      {/* Valor do benefício */}
                       {beneficio.valor && (
-                        <div className="text-sm font-semibold bg-green-50 p-2 rounded border">
+                        <div className="text-sm font-semibold bg-green-100 p-2 rounded-lg border">
                           {beneficio.valor}
                         </div>
                       )}
