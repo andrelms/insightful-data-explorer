@@ -6,18 +6,20 @@ import { siglas_estados } from "@/types/sindicatos";
 
 interface SearchFiltersProps {
   searchTerm: string;
-  setSearchTerm: (value: string) => void;
-  selectedEstado: string;
-  setSelectedEstado: (value: string) => void;
-  estados: any[];
+  onSearchChange: (value: string) => void;
+  estadoFilter: string;
+  onEstadoChange: (value: string) => void;
+  categoriaFilter: string;
+  onCategoriaChange: (value: string) => void;
 }
 
 export function SearchFilters({
   searchTerm,
-  setSearchTerm,
-  selectedEstado,
-  setSelectedEstado,
-  estados
+  onSearchChange,
+  estadoFilter,
+  onEstadoChange,
+  categoriaFilter,
+  onCategoriaChange
 }: SearchFiltersProps) {
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_auto] mb-6">
@@ -27,18 +29,18 @@ export function SearchFilters({
           type="search"
           placeholder="Buscar por sindicato, cargo, estado ou qualquer informação..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10 py-6 rounded-full bg-white/20 backdrop-blur-md border-white/10 placeholder:text-muted-foreground focus:bg-white/30 transition-all"
         />
       </div>
       
       <div className="flex gap-4 flex-wrap">
-        <Select value={selectedEstado} onValueChange={setSelectedEstado}>
+        <Select value={estadoFilter} onValueChange={onEstadoChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filtrar por estado" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos os estados</SelectItem>
+            <SelectItem value="all">Todos os estados</SelectItem>
             {Object.entries(siglas_estados).map(([sigla, nome]) => (
               <SelectItem key={sigla} value={sigla}>
                 {nome}
@@ -47,12 +49,12 @@ export function SearchFilters({
           </SelectContent>
         </Select>
         
-        <Select value="todos" onValueChange={() => {}}>
+        <Select value={categoriaFilter} onValueChange={onCategoriaChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filtrar por categoria" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todas as categorias</SelectItem>
+            <SelectItem value="all">Todas as categorias</SelectItem>
             <SelectItem value="hora-extra">Hora Extra</SelectItem>
             <SelectItem value="piso">Piso Salarial</SelectItem>
             <SelectItem value="beneficios">Benefícios</SelectItem>
