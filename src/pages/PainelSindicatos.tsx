@@ -1,13 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, ChevronDown, Info, ChevronRight } from "lucide-react";
+import { Search, MapPin, ChevronDown, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Dicionário de siglas dos estados
 const siglas_estados: {[key: string]: string} = {
@@ -35,7 +33,6 @@ interface SindicatoData {
   valoresHora: ValorHoraData[];
   jornadas: JornadaData[];
   pisosSalariais: PisoSalarialData[];
-  anotacoes: AnotacaoData[];
 }
 
 interface CargoData {
@@ -66,23 +63,18 @@ interface ValorHoraData {
 }
 
 interface BeneficioData {
-  titulo: string;
-  campo_formatado: string;
+  tipo: string;
+  nome: string;
+  valor: string | null;
+  descricao: string | null;
+  categoria: string | null;
+  fonte_coluna: string | null;
   registro_idx: number | null;
 }
 
 interface ParticularidadeData {
   categoria: string | null;
   conteudo: string | null;
-  detalhe: string | null;
-  registro_idx: number | null;
-}
-
-interface AnotacaoData {
-  coluna: string;
-  campo_formatado: string;
-  sugestao_particularidade: string | null;
-  registro_idx: number | null;
 }
 
 interface EstadoSindicatos {
@@ -96,10 +88,6 @@ const PainelSindicatos = () => {
   const [estadoFilter, setEstadoFilter] = useState("all");
   const [categoriaFilter, setCategoriaFilter] = useState("all");
   const [expandedSindicatos, setExpandedSindicatos] = useState<Record<string, boolean>>({});
-  const [expandedCargos, setExpandedCargos] = useState<Record<string, boolean>>({});
-  const [expandedBeneficios, setExpandedBeneficios] = useState<Record<string, boolean>>({});
-  const [expandedParticularidades, setExpandedParticularidades] = useState<Record<string, boolean>>({});
-  const [expandedValoresHora, setExpandedValoresHora] = useState<Record<string, boolean>>({});
   const [dados, setDados] = useState<EstadoSindicatos[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -115,6 +103,8 @@ const PainelSindicatos = () => {
         { data: sindicatos, error: sindicatosError },
         { data: convenios, error: conveniosError },
         { data: cargos, error: cargosError },
+        { data: beneficios, error: beneficiosError },
+        { data: particularidades, error: particularidadesError },
         { data: valoresHora, error: valoresHoraError },
         { data: jornadas, error: jornadasError },
         { data: pisosSalariais, error: pisosSalariaisError },
@@ -123,15 +113,19 @@ const PainelSindicatos = () => {
         supabase.from('sindicatos').select('id, nome, cnpj, site, data_base, estado'),
         supabase.from('convenios').select('id, sindicato_id, vigencia_inicio, vigencia_fim'),
         supabase.from('cargos').select('id, cargo, carga_horaria, cbo, convenio_id'),
+        supabase.from('beneficios_gerais').select('tipo, nome, valor, descricao, categoria, fonte_coluna, registro_idx, convenio_id').order('registro_idx'),
+        supabase.from('particularidades').select('categoria, conteudo, convenio_id'),
         supabase.from('valores_hora').select('cargo_id, descricao, valor'),
         supabase.from('jornada_cargo').select('cargo_id, carga_horaria, valor, unidade'),
         supabase.from('piso_salarial').select('cargo_id, descricao, valor'),
-        supabase.from('anotacoes').select('convenio_id, coluna, campo_formatado, sugestao_particularidade, registro_idx')
+        supabase.from('anotacoes').select('convenio_id, coluna, campo_formatado')
       ]);
 
       if (sindicatosError) throw sindicatosError;
       if (conveniosError) throw conveniosError;
       if (cargosError) throw cargosError;
+      if (beneficiosError) throw beneficiosError;
+      if (particularidadesError) throw particularidadesError;
       if (valoresHoraError) throw valoresHoraError;
       if (jornadasError) throw jornadasError;
       if (pisosSalariaisError) throw pisosSalariaisError;
@@ -157,6 +151,24 @@ const PainelSindicatos = () => {
           cargosMap.set(cargo.convenio_id, []);
         }
         cargosMap.get(cargo.convenio_id).push(cargo);
+      });
+
+      const beneficiosMap = new Map();
+      beneficios?.forEach(beneficio => {
+        if (beneficio.tipo !== 'DATA BASE') { // Filtrar tipo DATA BASE
+          if (!beneficiosMap.has(beneficio.convenio_id)) {
+            beneficiosMap.set(beneficio.convenio_id, []);
+          }
+          beneficiosMap.get(beneficio.convenio_id).push(beneficio);
+        }
+      });
+
+      const particularidadesMap = new Map();
+      particularidades?.forEach(part => {
+        if (!particularidadesMap.has(part.convenio_id)) {
+          particularidadesMap.set(part.convenio_id, []);
+        }
+        particularidadesMap.get(part.convenio_id).push(part);
       });
 
       const valoresHoraMap = new Map();
@@ -202,7 +214,7 @@ const PainelSindicatos = () => {
         const allValoresHora: ValorHoraData[] = [];
         const allJornadas: JornadaData[] = [];
         const allPisosSalariais: PisoSalarialData[] = [];
-        const allAnotacoes: AnotacaoData[] = [];
+        const allAnotacoes: any[] = [];
 
         sindicatoConvenios.forEach(convenio => {
           const conveniosCargos = cargosMap.get(convenio.id) || [];
@@ -210,39 +222,14 @@ const PainelSindicatos = () => {
           conveniosCargos.sort((a, b) => a.cargo.localeCompare(b.cargo));
           allCargos.push(...conveniosCargos);
 
+          const convenioBeneficios = beneficiosMap.get(convenio.id) || [];
+          allBeneficios.push(...convenioBeneficios);
+
+          const convenioParticularidades = particularidadesMap.get(convenio.id) || [];
+          allParticularidades.push(...convenioParticularidades);
+
           const convenioAnotacoes = anotacoesMap.get(convenio.id) || [];
           allAnotacoes.push(...convenioAnotacoes);
-
-          // Processar benefícios das anotações (exceto SITE, DATA BASE e PARTICULARIDADE)
-          const beneficiosFromAnotacoes = convenioAnotacoes
-            .filter(anotacao => 
-              anotacao.coluna && 
-              !['SITE', 'DATA BASE', 'PARTICULARIDADE'].includes(anotacao.coluna.toUpperCase()) &&
-              anotacao.sugestao_particularidade && 
-              anotacao.sugestao_particularidade !== 'PARTICULARIDADE'
-            )
-            .map(anotacao => ({
-              titulo: anotacao.sugestao_particularidade || 'Outros',
-              campo_formatado: anotacao.campo_formatado,
-              registro_idx: anotacao.registro_idx
-            }));
-          
-          allBeneficios.push(...beneficiosFromAnotacoes);
-
-          // Processar particularidades das anotações
-          const particularidadesFromAnotacoes = convenioAnotacoes
-            .filter(anotacao => 
-              anotacao.sugestao_particularidade === 'PARTICULARIDADE' ||
-              (anotacao.coluna && anotacao.coluna.toUpperCase() === 'PARTICULARIDADE')
-            )
-            .map(anotacao => ({
-              categoria: 'PARTICULARIDADE',
-              conteudo: anotacao.campo_formatado,
-              detalhe: null,
-              registro_idx: anotacao.registro_idx
-            }));
-          
-          allParticularidades.push(...particularidadesFromAnotacoes);
 
           // Para cada cargo, buscar valores hora, jornadas e pisos
           conveniosCargos.forEach(cargo => {
@@ -361,34 +348,6 @@ const PainelSindicatos = () => {
     }));
   };
 
-  const toggleCargos = (sindicatoId: string) => {
-    setExpandedCargos(prev => ({
-      ...prev,
-      [sindicatoId]: !prev[sindicatoId]
-    }));
-  };
-
-  const toggleBeneficios = (sindicatoId: string) => {
-    setExpandedBeneficios(prev => ({
-      ...prev,
-      [sindicatoId]: !prev[sindicatoId]
-    }));
-  };
-
-  const toggleParticularidades = (sindicatoId: string) => {
-    setExpandedParticularidades(prev => ({
-      ...prev,
-      [sindicatoId]: !prev[sindicatoId]
-    }));
-  };
-
-  const toggleValoresHora = (cargoId: string) => {
-    setExpandedValoresHora(prev => ({
-      ...prev,
-      [cargoId]: !prev[cargoId]
-    }));
-  };
-
   const formatCurrency = (value: number | null) => {
     if (!value) return 'N/A';
     return new Intl.NumberFormat('pt-BR', {
@@ -397,107 +356,28 @@ const PainelSindicatos = () => {
     }).format(value);
   };
 
-  const groupBeneficiosByTitulo = (beneficios: BeneficioData[]) => {
+  const groupBeneficiosByColuna = (beneficios: BeneficioData[]) => {
     const grouped: {[key: string]: BeneficioData[]} = {};
-    
     beneficios.forEach(beneficio => {
-      const titulo = beneficio.titulo || 'Outros';
-      if (!grouped[titulo]) {
-        grouped[titulo] = [];
+      const coluna = beneficio.fonte_coluna || 'Outros';
+      if (!grouped[coluna]) {
+        grouped[coluna] = [];
       }
-      grouped[titulo].push(beneficio);
+      grouped[coluna].push(beneficio);
     });
-    
     return grouped;
   };
 
-  const getInformacoesSindicato = (sindicato: SindicatoData) => {
-    const informacoes: { coluna: string; valor: string }[] = [];
-    
-    // Ordem específica solicitada
-    const ordemColunas = ['Site', 'Data Base', 'Vigência Início', 'Vigência Fim'];
-    
-    // Primeiro, tentar pegar dados diretos do sindicato
-    if (sindicato.site) {
-      informacoes.push({ coluna: 'Site', valor: sindicato.site });
-    }
-    
-    if (sindicato.data_base) {
-      informacoes.push({ coluna: 'Data Base', valor: sindicato.data_base });
-    }
-    
-    if (sindicato.vigencia_inicio) {
-      informacoes.push({ 
-        coluna: 'Vigência Início', 
-        valor: new Date(sindicato.vigencia_inicio).toLocaleDateString('pt-BR') 
-      });
-    }
-    
-    if (sindicato.vigencia_fim) {
-      informacoes.push({ 
-        coluna: 'Vigência Fim', 
-        valor: new Date(sindicato.vigencia_fim).toLocaleDateString('pt-BR') 
-      });
-    }
-    
-    // Se não tem dados diretos, buscar nas anotações apenas para as colunas específicas
-    if (sindicato.anotacoes) {
-      const colunasFiltradas = ['SITE', 'DATA BASE', 'VIGENCIA INICIO', 'VIGENCIA FIM'];
-      const anotacoesFiltradas = sindicato.anotacoes
-        .filter(anotacao => colunasFiltradas.includes(anotacao.coluna.toUpperCase()))
-        .filter(anotacao => !informacoes.some(info => info.coluna.toLowerCase() === anotacao.coluna.toLowerCase()));
-      
-      anotacoesFiltradas.forEach(anotacao => {
-        informacoes.push({ 
-          coluna: anotacao.coluna, 
-          valor: anotacao.campo_formatado 
-        });
-      });
-    }
-    
-    // Ordenar conforme a ordem solicitada
-    return informacoes.sort((a, b) => {
-      const indexA = ordemColunas.findIndex(col => col.toLowerCase() === a.coluna.toLowerCase());
-      const indexB = ordemColunas.findIndex(col => col.toLowerCase() === b.coluna.toLowerCase());
-      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-    });
-  };
-
-  const prepareCargoData = (sindicato: SindicatoData) => {
-    const cargoDataMap = new Map();
-    
-    sindicato.cargos.forEach(cargo => {
-      if (!cargoDataMap.has(cargo.id)) {
-        cargoDataMap.set(cargo.id, {
-          id: cargo.id,
-          cargo: cargo.cargo,
-          cbo: cargo.cbo,
-          jornadas: [],
-          pisos: [],
-          valores: []
-        });
+  const groupParticularidadesByCategoria = (particularidades: ParticularidadeData[]) => {
+    const grouped: {[key: string]: ParticularidadeData[]} = {};
+    particularidades.forEach(part => {
+      const categoria = part.categoria || 'Outros';
+      if (!grouped[categoria]) {
+        grouped[categoria] = [];
       }
+      grouped[categoria].push(part);
     });
-    
-    sindicato.jornadas.forEach(jornada => {
-      if (cargoDataMap.has(jornada.cargo_id)) {
-        cargoDataMap.get(jornada.cargo_id).jornadas.push(jornada);
-      }
-    });
-    
-    sindicato.pisosSalariais.forEach(piso => {
-      if (cargoDataMap.has(piso.cargo_id)) {
-        cargoDataMap.get(piso.cargo_id).pisos.push(piso);
-      }
-    });
-    
-    sindicato.valoresHora.forEach(valor => {
-      if (cargoDataMap.has(valor.cargo_id)) {
-        cargoDataMap.get(valor.cargo_id).valores.push(valor);
-      }
-    });
-    
-    return Array.from(cargoDataMap.values()).sort((a, b) => a.cargo.localeCompare(b.cargo));
+    return grouped;
   };
   
   return (
@@ -555,10 +435,7 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className="grid gap-6" style={{
-          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-          gridAutoRows: 'auto'
-        }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 auto-rows-max">
           {filteredEstados.map((estado) => (
             <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full flex flex-col">
@@ -602,161 +479,158 @@ const PainelSindicatos = () => {
                             <div className="space-y-2">
                               <h4 className="font-medium text-xs text-accent-foreground">Informações do Sindicato</h4>
                               <div className="grid grid-cols-1 gap-2">
-                                {getInformacoesSindicato(sindicato).map((info, idx) => (
-                                  <div key={idx} className="bg-muted/30 p-2 rounded border-l-2 border-primary">
-                                    <div className="text-xs font-medium">{info.coluna}</div>
-                                    <div className="truncate">{info.valor}</div>
+                                {sindicato.site && (
+                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                    <div className="text-xs font-medium">Site</div>
+                                    <div className="truncate">{sindicato.site}</div>
                                   </div>
-                                ))}
+                                )}
+                                {sindicato.data_base && (
+                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                    <div className="text-xs font-medium">Data Base</div>
+                                    <div>{sindicato.data_base}</div>
+                                  </div>
+                                )}
+                                {!sindicato.site && !sindicato.data_base && sindicato.anotacoes && sindicato.anotacoes.length > 0 && (
+                                  <div className="space-y-1">
+                                    {sindicato.anotacoes.map((anotacao, idx) => (
+                                      <div key={idx} className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                        <div className="text-xs font-medium">{anotacao.coluna}</div>
+                                        <div>{anotacao.campo_formatado}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {sindicato.vigencia_inicio && (
+                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                    <div className="text-xs font-medium">Vigência Início</div>
+                                    <div>{new Date(sindicato.vigencia_inicio).toLocaleDateString('pt-BR')}</div>
+                                  </div>
+                                )}
+                                {sindicato.vigencia_fim && (
+                                  <div className="bg-muted/30 p-2 rounded border-l-2 border-primary">
+                                    <div className="text-xs font-medium">Vigência Fim</div>
+                                    <div>{new Date(sindicicato.vigencia_fim).toLocaleDateString('pt-BR')}</div>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
-                            {/* Cargos e Remuneração - Collapsible */}
+                            {/* Cards de Cargos individuais */}
                             {sindicato.cargos && sindicato.cargos.length > 0 && (
-                              <Collapsible 
-                                open={expandedCargos[sindicato.id]} 
-                                onOpenChange={() => toggleCargos(sindicato.id)}
-                              >
-                                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary w-full text-left py-2">
-                                  <ChevronRight className={cn(
-                                    "h-4 w-4 transition-transform",
-                                    expandedCargos[sindicato.id] && "transform rotate-90"
-                                  )} />
-                                  Cargos e Remuneração ({sindicato.cargos.length})
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="mt-2">
-                                  <div className="space-y-3">
-                                    {prepareCargoData(sindicato).map((cargoData) => (
-                                      <div key={cargoData.id} className="bg-muted/20 p-3 rounded border">
-                                        {/* Cargo Info */}
-                                        <div className="mb-3">
-                                          <div className="font-medium text-sm">{cargoData.cargo}</div>
-                                          {cargoData.cbo && (
-                                            <div className="text-xs text-muted-foreground">CBO: {cargoData.cbo}</div>
-                                          )}
-                                        </div>
-                                        
-                                        {/* Carga Horária e Piso Salarial lado a lado */}
-                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                              <div className="space-y-3">
+                                {sindicato.cargos.map((cargo, i) => {
+                                  const jornadasCargo = sindicato.jornadas.filter(j => j.cargo_id === cargo.id);
+                                  const pisosCargo = sindicato.pisosSalariais.filter(p => p.cargo_id === cargo.id);
+                                  const valoresCargo = sindicato.valoresHora.filter(vh => vh.cargo_id === cargo.id);
+                                  
+                                  return (
+                                    <Card key={i} className="bg-muted/10 border border-muted/30">
+                                      <CardContent className="p-3">
+                                        <div className="grid grid-cols-3 gap-3">
+                                          {/* Cargo */}
                                           <div>
-                                            <div className="text-xs font-medium mb-1">Carga Horária</div>
-                                            {cargoData.jornadas.map((jornada, idx) => (
-                                              <div key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mb-1">
-                                                {jornada.valor} {jornada.unidade}
-                                              </div>
-                                            ))}
-                                          </div>
-                                          <div>
-                                            <div className="text-xs font-medium mb-1">Piso Salarial</div>
-                                            {cargoData.pisos.map((piso, idx) => (
-                                              <div key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs mb-1">
-                                                <div className="font-medium">
-                                                  {formatCurrency(piso.valor)}
-                                                  {piso.descricao && piso.descricao.toUpperCase() !== 'PISO SALARIAL' && (
-                                                    <span className="text-xs ml-1">({piso.descricao})</span>
-                                                  )}
+                                            <h5 className="font-medium text-xs text-accent-foreground mb-2">Cargo</h5>
+                                            <div className="font-medium text-sm mb-1">{cargo.cargo}</div>
+                                            {cargo.cbo && (
+                                              <div className="text-xs text-muted-foreground">CBO: {cargo.cbo}</div>
+                                            )}
+                                            {jornadasCargo.length > 0 && (
+                                              <div className="mt-1">
+                                                <div className="text-xs font-medium text-muted-foreground">Carga Horária</div>
+                                                <div className="flex flex-wrap gap-1">
+                                                  {jornadasCargo.map((jornada, idx) => (
+                                                    <span key={idx} className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs">
+                                                      {jornada.valor} {jornada.unidade}
+                                                    </span>
+                                                  ))}
                                                 </div>
                                               </div>
-                                            ))}
+                                            )}
                                           </div>
-                                        </div>
-                                        
-                                        {/* Valores Hora - Collapsible horizontal */}
-                                        {cargoData.valores.length > 0 && (
-                                          <Collapsible 
-                                            open={expandedValoresHora[cargoData.id]} 
-                                            onOpenChange={() => toggleValoresHora(cargoData.id)}
-                                          >
-                                            <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium hover:text-primary w-full text-left">
-                                              <ChevronRight className={cn(
-                                                "h-3 w-3 transition-transform",
-                                                expandedValoresHora[cargoData.id] && "transform rotate-90"
-                                              )} />
-                                              Valores Hora ({cargoData.valores.length})
-                                            </CollapsibleTrigger>
-                                            <CollapsibleContent className="mt-2">
-                                              <div className="flex flex-wrap gap-2">
-                                                {cargoData.valores.map((valor, idx) => (
+                                          
+                                          {/* Pisos Salariais */}
+                                          <div>
+                                            <h5 className="font-medium text-xs text-accent-foreground mb-2">Pisos Salariais</h5>
+                                            {pisosCargo.length > 0 ? (
+                                              <div className="space-y-1">
+                                                {pisosCargo.map((piso, idx) => (
+                                                  <div key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                                                    <div className="font-medium">{piso.descricao || 'Piso'}</div>
+                                                    <div>{formatCurrency(piso.valor)}</div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <div className="text-xs text-muted-foreground">Não informado</div>
+                                            )}
+                                          </div>
+                                          
+                                          {/* Valores Hora */}
+                                          <div>
+                                            <h5 className="font-medium text-xs text-accent-foreground mb-2">Valores Hora</h5>
+                                            {valoresCargo.length > 0 ? (
+                                              <div className="space-y-1">
+                                                {valoresCargo.map((valor, idx) => (
                                                   <div key={idx} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
                                                     <div className="font-medium">{valor.descricao || 'Valor'}</div>
                                                     <div>{formatCurrency(valor.valor)}</div>
                                                   </div>
                                                 ))}
                                               </div>
-                                            </CollapsibleContent>
-                                          </Collapsible>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </CollapsibleContent>
-                              </Collapsible>
-                            )}
-
-                            {/* Benefícios Agrupados por Título - Collapsible */}
-                            {sindicato.beneficios && sindicato.beneficios.length > 0 && (
-                              <Collapsible 
-                                open={expandedBeneficios[sindicato.id]} 
-                                onOpenChange={() => toggleBeneficios(sindicato.id)}
-                              >
-                                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary w-full text-left py-2">
-                                  <ChevronRight className={cn(
-                                    "h-4 w-4 transition-transform",
-                                    expandedBeneficios[sindicato.id] && "transform rotate-90"
-                                  )} />
-                                  Benefícios ({sindicato.beneficios.length})
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="mt-2">
-                                  <div className="space-y-3">
-                                    {Object.entries(groupBeneficiosByTitulo(sindicato.beneficios)).map(([titulo, beneficios]) => (
-                                      <div key={titulo} className="bg-muted/20 p-3 rounded border">
-                                        <div className="font-medium text-sm mb-2">{titulo}</div>
-                                        <div className="space-y-1">
-                                          {beneficios
-                                            .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
-                                            .map((beneficio, i) => (
-                                            <div key={i} className="bg-green-100 text-green-800 p-2 rounded text-xs">
-                                              <div>{beneficio.campo_formatado}</div>
-                                            </div>
-                                          ))}
+                                            ) : (
+                                              <div className="text-xs text-muted-foreground">Não informado</div>
+                                            )}
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </CollapsibleContent>
-                              </Collapsible>
+                                      </CardContent>
+                                    </Card>
+                                  );
+                                })}
+                              </div>
                             )}
 
-                            {/* Particularidades - Collapsible */}
-                            {sindicato.particularidades && sindicato.particularidades.length > 0 && (
-                              <Collapsible 
-                                open={expandedParticularidades[sindicato.id]} 
-                                onOpenChange={() => toggleParticularidades(sindicato.id)}
-                              >
-                                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary w-full text-left py-2">
-                                  <ChevronRight className={cn(
-                                    "h-4 w-4 transition-transform",
-                                    expandedParticularidades[sindicato.id] && "transform rotate-90"
-                                  )} />
-                                  Particularidades ({sindicato.particularidades.length})
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="mt-2">
-                                  <div className="space-y-2">
-                                    {sindicato.particularidades
-                                      .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
-                                      .map((part, i) => (
-                                      <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-                                        {part.detalhe && (
-                                          <div className="font-medium mb-1">{part.detalhe}</div>
-                                        )}
-                                        {part.conteudo && (
-                                          <div>{part.conteudo}</div>
-                                        )}
+                            {/* Benefícios Agrupados por Coluna */}
+                            {sindicato.beneficios && sindicato.beneficios.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
+                                <div className="space-y-3">
+                                  {Object.entries(groupBeneficiosByColuna(sindicato.beneficios)).map(([coluna, beneficios]) => (
+                                    <div key={coluna} className="bg-muted/20 p-3 rounded border">
+                                      <div className="font-medium text-sm mb-2">{coluna}</div>
+                                      <div className="space-y-1">
+                                        {beneficios.map((beneficio, i) => (
+                                          <div key={i} className="bg-green-100 text-green-800 p-2 rounded text-xs">
+                                            <div className="font-medium">{beneficio.tipo} - {beneficio.nome}</div>
+                                            <div>{beneficio.valor || beneficio.descricao || '-'}</div>
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
-                                  </div>
-                                </CollapsibleContent>
-                              </Collapsible>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Particularidades Agrupadas por Categoria */}
+                            {sindicato.particularidades && sindicato.particularidades.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Particularidades</h4>
+                                <div className="space-y-3">
+                                  {Object.entries(groupParticularidadesByCategoria(sindicato.particularidades)).map(([categoria, particularidades]) => (
+                                    <div key={categoria} className="bg-muted/20 p-3 rounded border">
+                                      <div className="font-medium text-sm mb-2">{categoria}</div>
+                                      <div className="space-y-1">
+                                        {particularidades.map((part, i) => (
+                                          <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
+                                            {part.conteudo}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
                             )}
                             
                             <div className="pt-2 mt-4 border-t text-center">
