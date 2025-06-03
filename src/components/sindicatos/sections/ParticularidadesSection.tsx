@@ -3,14 +3,22 @@ import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ParticularidadeData } from "@/types/sindicatos";
+import { ParticularidadeData, AnotacaoData } from "@/types/sindicatos";
 
 interface ParticularidadesSectionProps {
   particularidades: ParticularidadeData[];
+  anotacoes: AnotacaoData[];
 }
 
-export function ParticularidadesSection({ particularidades }: ParticularidadesSectionProps) {
+export function ParticularidadesSection({ particularidades, anotacoes }: ParticularidadesSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Função para obter campo_formatado da anotação pelo registro_idx
+  const getCampoFormatado = (registroIdx: number | null) => {
+    if (!registroIdx) return null;
+    const anotacao = anotacoes.find(a => a.registro_idx === registroIdx);
+    return anotacao?.campo_formatado || null;
+  };
 
   const particularidadesComDetalhe = particularidades
     .filter(part => part.detalhe) // Mostrar apenas se tem detalhe
@@ -27,14 +35,23 @@ export function ParticularidadesSection({ particularidades }: ParticularidadesSe
       </CollapsibleTrigger>
       
       <CollapsibleContent className="space-y-2 mt-2">
-        {particularidadesComDetalhe.map((part, i) => (
-          <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-            <div className="font-medium mb-1">{part.detalhe}</div>
-            {part.conteudo && (
-              <div className="text-xs">{part.conteudo}</div>
-            )}
-          </div>
-        ))}
+        {particularidadesComDetalhe.map((part, i) => {
+          const campoFormatado = getCampoFormatado(part.registro_idx);
+          
+          return (
+            <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
+              <div className="font-medium mb-1">{part.detalhe}</div>
+              {campoFormatado && (
+                <div className="text-xs mb-1 p-1 bg-orange-50 border border-orange-200 rounded">
+                  {campoFormatado}
+                </div>
+              )}
+              {part.conteudo && (
+                <div className="text-xs">{part.conteudo}</div>
+              )}
+            </div>
+          );
+        })}
       </CollapsibleContent>
     </Collapsible>
   );
