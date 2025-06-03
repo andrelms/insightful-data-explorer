@@ -158,7 +158,8 @@ export async function processExcelData(
               nome: row['SINDICATO'],
               cnpj: row['CNPJ'] || null,
               site: row['SITE'] || null,
-              data_base: row['DATA BASE'] || null
+              data_base: row['DATA BASE'] || null,
+              file_id: importId
             })
             .select('id')
             .single();
@@ -180,6 +181,7 @@ export async function processExcelData(
           .insert({
             descricao: titulo,
             sindicato_id: sindicatoId,
+            file_id: importId
           })
           .select('id')
           .single();
@@ -217,7 +219,8 @@ export async function processExcelData(
             .insert({
               cargo: row['CARGO'],
               carga_horaria: row['CARGA HORÁRIA'] || null,
-              convenio_id: convenioId
+              convenio_id: convenioId,
+              file_id: importId
             })
             .select('id')
             .single();
@@ -234,6 +237,7 @@ export async function processExcelData(
             .insert({
               cargo_id: cargoId,
               valor: row['PISO SALARIAL'] ? parseFloat(row['PISO SALARIAL']) : null,
+              file_id: importId
             });
             
           // Inserir valores de hora se existirem
@@ -244,7 +248,8 @@ export async function processExcelData(
                 .insert({
                   cargo_id: cargoId,
                   tipo: 'normal',
-                  valor: parseFloat(row['VALOR HORA NORMAL'])
+                  valor: parseFloat(row['VALOR HORA NORMAL']),
+                  file_id: importId
                 });
             }
             
@@ -254,7 +259,8 @@ export async function processExcelData(
                 .insert({
                   cargo_id: cargoId,
                   tipo: 'extra_50',
-                  valor: parseFloat(row['VALOR HORA EXTRA 50%'])
+                  valor: parseFloat(row['VALOR HORA EXTRA 50%']),
+                  file_id: importId
                 });
             }
             
@@ -264,7 +270,8 @@ export async function processExcelData(
                 .insert({
                   cargo_id: cargoId,
                   tipo: 'extra_100',
-                  valor: parseFloat(row['VALOR HORA EXTRA 100%'])
+                  valor: parseFloat(row['VALOR HORA EXTRA 100%']),
+                  file_id: importId
                 });
             }
           }
@@ -309,7 +316,8 @@ export async function processExcelData(
                 .from('cargos')
                 .insert({
                   cargo: 'Geral',
-                  convenio_id: convenioId
+                  convenio_id: convenioId,
+                  file_id: importId
                 })
                 .select('id')
                 .single();
@@ -317,13 +325,14 @@ export async function processExcelData(
               cargoId = cargoData.id;
             }
             
-            // Now insert the particularidade with the cargo_id
+            // Now insert the particularidade with the cargo_id and file_id
             await supabase
               .from('particularidades')
               .insert({
                 cargo_id: cargoId,
                 conteudo: particularidade,
-                categoria: 'Geral'
+                categoria: 'Geral',
+                file_id: importId
               });
             
             // Add to processed list
