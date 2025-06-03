@@ -535,7 +535,18 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 auto-fit-cards">
+          <style>{`
+            .auto-fit-cards {
+              grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+              gap: 1.5rem;
+            }
+            @media (max-width: 768px) {
+              .auto-fit-cards {
+                grid-template-columns: 1fr;
+              }
+            }
+          `}</style>
           {filteredEstados.map((estado) => (
             <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full flex flex-col">
@@ -617,8 +628,12 @@ const PainelSindicatos = () => {
                                           <div className="text-xs font-medium mb-1">Piso Salarial</div>
                                           {cargoData.pisos.map((piso, idx) => (
                                             <div key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs mb-1">
-                                              <div className="font-medium">{piso.descricao || 'Piso'}</div>
-                                              <div>{formatCurrency(piso.valor)}</div>
+                                              <div className="font-medium">
+                                                {formatCurrency(piso.valor)}
+                                                {piso.descricao && piso.descricao.toUpperCase() !== 'PISO SALARIAL' && (
+                                                  <span className="text-xs ml-1">({piso.descricao})</span>
+                                                )}
+                                              </div>
                                             </div>
                                           ))}
                                         </div>
@@ -668,8 +683,8 @@ const PainelSindicatos = () => {
                                           .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
                                           .map((beneficio, i) => (
                                           <div key={i} className="bg-green-100 text-green-800 p-2 rounded text-xs">
-                                            <div className="font-medium">{beneficio.tipo} - {beneficio.nome}</div>
-                                            <div>{beneficio.valor || beneficio.descricao || '-'}</div>
+                                            <div className="font-medium">{beneficio.descricao || beneficio.nome}</div>
+                                            <div>{beneficio.valor || '-'}</div>
                                           </div>
                                         ))}
                                       </div>
@@ -684,10 +699,16 @@ const PainelSindicatos = () => {
                               <div className="space-y-2">
                                 <h4 className="font-medium text-xs text-accent-foreground">Particularidades</h4>
                                 <div className="space-y-2">
-                                  {sindicato.particularidades.map((part, i) => (
+                                  {sindicato.particularidades
+                                    .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
+                                    .map((part, i) => (
                                     <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-                                      <div className="font-medium">{part.detalhe}</div>
-                                      {part.conteudo && <div className="mt-1">{part.conteudo}</div>}
+                                      {part.detalhe && (
+                                        <div className="font-medium mb-1">{part.detalhe}</div>
+                                      )}
+                                      {part.conteudo && (
+                                        <div>{part.conteudo}</div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
