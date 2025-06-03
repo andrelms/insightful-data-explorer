@@ -39,9 +39,7 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
             .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
             .map((part, i) => (
             <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-              {part.conteudo && (
-                <div>{part.conteudo}</div>
-              )}
+              {part.conteudo || part.detalhe}
             </div>
           ))}
         </div>
