@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -386,6 +385,10 @@ const PainelSindicatos = () => {
   const getInformacoesSindicato = (sindicato: SindicatoData) => {
     const informacoes: { coluna: string; valor: string }[] = [];
     
+    // Ordem específica solicitada
+    const ordemColunas = ['Site', 'Data Base', 'Vigência Início', 'Vigência Fim'];
+    
+    // Primeiro, tentar pegar dados diretos do sindicato
     if (sindicato.site) {
       informacoes.push({ coluna: 'Site', valor: sindicato.site });
     }
@@ -408,20 +411,104 @@ const PainelSindicatos = () => {
       });
     }
     
-    // Se não tem site nem data_base, pegar das anotações apenas essas colunas específicas
-    if (!sindicato.site && !sindicato.data_base && sindicato.anotacoes) {
+    // Se não tem dados diretos, buscar nas anotações apenas para as colunas específicas
+    if (sindicato.anotacoes) {
       const colunasFiltradas = ['SITE', 'DATA BASE', 'VIGENCIA INICIO', 'VIGENCIA FIM'];
-      sindicato.anotacoes
+      const anotacoesFiltradas = sindicato.anotacoes
         .filter(anotacao => colunasFiltradas.includes(anotacao.coluna.toUpperCase()))
-        .forEach(anotacao => {
-          informacoes.push({ 
-            coluna: anotacao.coluna, 
-            valor: anotacao.campo_formatado 
-          });
+        .filter(anotacao => !informacoes.some(info => info.coluna.toLowerCase() === anotacao.coluna.toLowerCase()));
+      
+      anotacoesFiltradas.forEach(anotacao => {
+        informacoes.push({ 
+          coluna: anotacao.coluna, 
+          valor: anotacao.campo_formatado 
         });
+      });
     }
     
-    return informacoes;
+    // Ordenar conforme a ordem solicitada
+    return informacoes.sort((a, b) => {
+      const indexA = ordemColunas.findIndex(col => col.toLowerCase() === a.coluna.toLowerCase());
+      const indexB = ordemColunas.findIndex(col => col.toLowerCase() === b.coluna.toLowerCase());
+      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+    });
+  };
+
+  const prepareTableData = (sindicato: SindicatoData) => {
+    // Criar um mapa combinado de dados por cargo
+    const cargoDataMap = new Map();
+    
+    // Primeiro, coletar todos os cargos
+    sindicato.cargos.forEach(cargo => {
+      if (!cargoDataMap.has(cargo.id)) {
+        cargoDataMap.set(cargo.id, {
+          cargo: cargo.cargo,
+          cbo: cargo.cbo,
+          jornadas: [],
+          pisos: [],
+          valores: []
+        });
+      }
+    });
+    
+    // Adicionar jornadas
+    sindicato.jornadas.forEach(jornada => {
+      if (cargoDataMap.has(jornada.cargo_id)) {
+        cargoDataMap.get(jornada.cargo_id).jornadas.push(jornada);
+      }
+    });
+    
+    // Adicionar pisos
+    sindicato.pisosSalariais.forEach(piso => {
+      if (cargoDataMap.has(piso.cargo_id)) {
+        cargoDataMap.get(piso.cargo_id).pisos.push(piso);
+      }
+    });
+    
+    // Adicionar valores hora
+    sindicato.valoresHora.forEach(valor => {
+      if (cargoDataMap.has(valor.cargo_id)) {
+        cargoDataMap.get(valor.cargo_id).valores.push(valor);
+      }
+    });
+    
+    // Criar lista de linhas para a tabela
+    const tableRows: any[] = [];
+    
+    cargoDataMap.forEach((data, cargoId) => {
+      // Determinar o número máximo de linhas necessárias
+      const maxRows = Math.max(
+        data.jornadas.length || 1,
+        data.pisos.length || 1,
+        data.valores.length || 1
+      );
+      
+      for (let i = 0; i < maxRows; i++) {
+        tableRows.push({
+          cargoId,
+          cargo: i === 0 ? data.cargo : '',
+          cbo: i === 0 ? data.cbo : '',
+          jornada: data.jornadas[i] || null,
+          piso: data.pisos[i] || null,
+          valor: data.valores[i] || null,
+          rowIndex: i
+        });
+      }
+    });
+    
+    // Ordenar por registro_idx como chave secundária
+    return tableRows.sort((a, b) => {
+      // Primeiro por cargo
+      if (a.cargo !== b.cargo && a.cargo && b.cargo) {
+        return a.cargo.localeCompare(b.cargo);
+      }
+      
+      // Depois por registro_idx dos pisos ou jornadas
+      const aRegistroIdx = a.piso?.registro_idx || a.jornada?.registro_idx || 0;
+      const bRegistroIdx = b.piso?.registro_idx || b.jornada?.registro_idx || 0;
+      
+      return aRegistroIdx - bRegistroIdx;
+    });
   };
   
   return (
@@ -479,7 +566,7 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-max">
           {filteredEstados.map((estado) => (
             <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full flex flex-col">
@@ -532,77 +619,61 @@ const PainelSindicatos = () => {
                               </div>
                             </div>
 
-                            {/* Cards de Cargos individuais */}
+                            {/* Tabela de Cargos, Carga Horária, Pisos Salariais e Valores Hora */}
                             {sindicato.cargos && sindicato.cargos.length > 0 && (
-                              <div className="space-y-3">
-                                {sindicato.cargos.map((cargo, i) => {
-                                  const jornadasCargo = sindicato.jornadas.filter(j => j.cargo_id === cargo.id);
-                                  const pisosCargo = sindicato.pisosSalariais.filter(p => p.cargo_id === cargo.id);
-                                  const valoresCargo = sindicato.valoresHora.filter(vh => vh.cargo_id === cargo.id);
-                                  
-                                  return (
-                                    <Card key={i} className="bg-muted/10 border border-muted/30">
-                                      <CardContent className="p-3">
-                                        <div className="grid grid-cols-3 gap-3">
-                                          {/* Cargo e Carga Horária */}
-                                          <div>
-                                            <h5 className="font-medium text-xs text-accent-foreground mb-2">Cargo</h5>
-                                            <div className="font-medium text-sm mb-1">{cargo.cargo}</div>
-                                            {cargo.cbo && (
-                                              <div className="text-xs text-muted-foreground mb-1">CBO: {cargo.cbo}</div>
-                                            )}
-                                            {jornadasCargo.length > 0 && (
-                                              <div className="mt-1">
-                                                <div className="text-xs font-medium text-muted-foreground">Carga Horária</div>
-                                                <div className="flex flex-wrap gap-1">
-                                                  {jornadasCargo.map((jornada, idx) => (
-                                                    <span key={idx} className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs">
-                                                      {jornada.valor} {jornada.unidade}
-                                                    </span>
-                                                  ))}
-                                                </div>
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-xs text-accent-foreground">Cargos e Remuneração</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs border-collapse">
+                                    <thead>
+                                      <tr className="bg-muted/20">
+                                        <th className="text-left p-2 border border-muted/30 font-medium">Cargo</th>
+                                        <th className="text-left p-2 border border-muted/30 font-medium">Carga Horária</th>
+                                        <th className="text-left p-2 border border-muted/30 font-medium">Piso Salarial</th>
+                                        <th className="text-left p-2 border border-muted/30 font-medium">Valor Hora</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {prepareTableData(sindicato).map((row, idx) => (
+                                        <tr key={idx} className="hover:bg-muted/10">
+                                          <td className="p-2 border border-muted/30">
+                                            {row.cargo && (
+                                              <div>
+                                                <div className="font-medium">{row.cargo}</div>
+                                                {row.cbo && (
+                                                  <div className="text-xs text-muted-foreground">CBO: {row.cbo}</div>
+                                                )}
                                               </div>
                                             )}
-                                          </div>
-                                          
-                                          {/* Pisos Salariais */}
-                                          <div>
-                                            <h5 className="font-medium text-xs text-accent-foreground mb-2">Pisos Salariais</h5>
-                                            {pisosCargo.length > 0 ? (
-                                              <div className="space-y-1">
-                                                {pisosCargo.map((piso, idx) => (
-                                                  <div key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                                                    <div className="font-medium">{piso.descricao || 'Piso'}</div>
-                                                    <div>{formatCurrency(piso.valor)}</div>
-                                                  </div>
-                                                ))}
+                                          </td>
+                                          <td className="p-2 border border-muted/30">
+                                            {row.jornada && (
+                                              <div className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs">
+                                                {row.jornada.valor} {row.jornada.unidade}
                                               </div>
-                                            ) : (
-                                              <div className="text-xs text-muted-foreground">Não informado</div>
                                             )}
-                                          </div>
-                                          
-                                          {/* Valores Hora */}
-                                          <div>
-                                            <h5 className="font-medium text-xs text-accent-foreground mb-2">Valores Hora</h5>
-                                            {valoresCargo.length > 0 ? (
-                                              <div className="space-y-1">
-                                                {valoresCargo.map((valor, idx) => (
-                                                  <div key={idx} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
-                                                    <div className="font-medium">{valor.descricao || 'Valor'}</div>
-                                                    <div>{formatCurrency(valor.valor)}</div>
-                                                  </div>
-                                                ))}
+                                          </td>
+                                          <td className="p-2 border border-muted/30">
+                                            {row.piso && (
+                                              <div className="bg-green-100 text-green-800 px-1 py-0.5 rounded text-xs">
+                                                <div className="font-medium">{row.piso.descricao || 'Piso'}</div>
+                                                <div>{formatCurrency(row.piso.valor)}</div>
                                               </div>
-                                            ) : (
-                                              <div className="text-xs text-muted-foreground">Não informado</div>
                                             )}
-                                          </div>
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  );
-                                })}
+                                          </td>
+                                          <td className="p-2 border border-muted/30">
+                                            {row.valor && (
+                                              <div className="bg-orange-100 text-orange-800 px-1 py-0.5 rounded text-xs">
+                                                <div className="font-medium">{row.valor.descricao || 'Valor'}</div>
+                                                <div>{formatCurrency(row.valor.valor)}</div>
+                                              </div>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
                               </div>
                             )}
 
