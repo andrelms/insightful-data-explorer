@@ -51,7 +51,7 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
         <div className="space-y-3">
           {Object.entries(groupBeneficiosByTitulo(sindicato.beneficios)).map(([titulo, beneficios]) => (
             <div key={titulo} className="bg-muted/20 p-3 rounded border">
-              <div className="font-medium text-sm mb-2">{titulo}</div>
+              <div className="font-medium text-sm mb-2 text-blue-700">{titulo}</div>
               <div className="space-y-1">
                 {beneficios
                   .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
