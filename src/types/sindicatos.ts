@@ -1,4 +1,15 @@
 
+// Dicionário de siglas dos estados
+export const siglas_estados: {[key: string]: string} = {
+  'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia',
+  'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás',
+  'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais',
+  'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná', 'PE': 'Pernambuco', 'PI': 'Piauí',
+  'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte', 'RS': 'Rio Grande do Sul',
+  'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina', 'SP': 'São Paulo',
+  'SE': 'Sergipe', 'TO': 'Tocantins'
+};
+
 export interface SindicatoData {
   id: string;
   nome: string;
@@ -45,8 +56,12 @@ export interface ValorHoraData {
 }
 
 export interface BeneficioData {
-  titulo: string;
-  campo_formatado: string;
+  tipo: string;
+  nome: string;
+  valor: string | null;
+  descricao: string | null;
+  categoria: string | null;
+  fonte_coluna: string | null;
   registro_idx: number | null;
 }
 
@@ -68,13 +83,4 @@ export interface EstadoSindicatos {
   sigla: string;
   nome: string;
   sindicatos: SindicatoData[];
-}
-
-export interface CargoCompleto {
-  id: string;
-  cargo: string;
-  cbo: string | null;
-  jornadas: JornadaData[];
-  pisos: PisoSalarialData[];
-  valores: ValorHoraData[];
 }
