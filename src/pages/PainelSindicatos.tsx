@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -65,12 +66,8 @@ interface ValorHoraData {
 }
 
 interface BeneficioData {
-  tipo: string;
-  nome: string;
-  valor: string | null;
-  descricao: string | null;
-  categoria: string | null;
-  fonte_coluna: string | null;
+  titulo: string;
+  campo_formatado: string;
   registro_idx: number | null;
 }
 
@@ -99,6 +96,9 @@ const PainelSindicatos = () => {
   const [estadoFilter, setEstadoFilter] = useState("all");
   const [categoriaFilter, setCategoriaFilter] = useState("all");
   const [expandedSindicatos, setExpandedSindicatos] = useState<Record<string, boolean>>({});
+  const [expandedCargos, setExpandedCargos] = useState<Record<string, boolean>>({});
+  const [expandedBeneficios, setExpandedBeneficios] = useState<Record<string, boolean>>({});
+  const [expandedParticularidades, setExpandedParticularidades] = useState<Record<string, boolean>>({});
   const [expandedValoresHora, setExpandedValoresHora] = useState<Record<string, boolean>>({});
   const [dados, setDados] = useState<EstadoSindicatos[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,8 +115,6 @@ const PainelSindicatos = () => {
         { data: sindicatos, error: sindicatosError },
         { data: convenios, error: conveniosError },
         { data: cargos, error: cargosError },
-        { data: beneficios, error: beneficiosError },
-        { data: particularidades, error: particularidadesError },
         { data: valoresHora, error: valoresHoraError },
         { data: jornadas, error: jornadasError },
         { data: pisosSalariais, error: pisosSalariaisError },
@@ -125,8 +123,6 @@ const PainelSindicatos = () => {
         supabase.from('sindicatos').select('id, nome, cnpj, site, data_base, estado'),
         supabase.from('convenios').select('id, sindicato_id, vigencia_inicio, vigencia_fim'),
         supabase.from('cargos').select('id, cargo, carga_horaria, cbo, convenio_id'),
-        supabase.from('beneficios_gerais').select('tipo, nome, valor, descricao, categoria, fonte_coluna, registro_idx, convenio_id').order('registro_idx'),
-        supabase.from('particularidades').select('categoria, conteudo, detalhe, registro_idx, convenio_id'),
         supabase.from('valores_hora').select('cargo_id, descricao, valor'),
         supabase.from('jornada_cargo').select('cargo_id, carga_horaria, valor, unidade'),
         supabase.from('piso_salarial').select('cargo_id, descricao, valor'),
@@ -136,8 +132,6 @@ const PainelSindicatos = () => {
       if (sindicatosError) throw sindicatosError;
       if (conveniosError) throw conveniosError;
       if (cargosError) throw cargosError;
-      if (beneficiosError) throw beneficiosError;
-      if (particularidadesError) throw particularidadesError;
       if (valoresHoraError) throw valoresHoraError;
       if (jornadasError) throw jornadasError;
       if (pisosSalariaisError) throw pisosSalariaisError;
@@ -163,24 +157,6 @@ const PainelSindicatos = () => {
           cargosMap.set(cargo.convenio_id, []);
         }
         cargosMap.get(cargo.convenio_id).push(cargo);
-      });
-
-      const beneficiosMap = new Map();
-      beneficios?.forEach(beneficio => {
-        if (beneficio.tipo !== 'DATA BASE') { // Filtrar tipo DATA BASE
-          if (!beneficiosMap.has(beneficio.convenio_id)) {
-            beneficiosMap.set(beneficio.convenio_id, []);
-          }
-          beneficiosMap.get(beneficio.convenio_id).push(beneficio);
-        }
-      });
-
-      const particularidadesMap = new Map();
-      particularidades?.forEach(part => {
-        if (!particularidadesMap.has(part.convenio_id)) {
-          particularidadesMap.set(part.convenio_id, []);
-        }
-        particularidadesMap.get(part.convenio_id).push(part);
       });
 
       const valoresHoraMap = new Map();
@@ -234,14 +210,39 @@ const PainelSindicatos = () => {
           conveniosCargos.sort((a, b) => a.cargo.localeCompare(b.cargo));
           allCargos.push(...conveniosCargos);
 
-          const convenioBeneficios = beneficiosMap.get(convenio.id) || [];
-          allBeneficios.push(...convenioBeneficios);
-
-          const convenioParticularidades = particularidadesMap.get(convenio.id) || [];
-          allParticularidades.push(...convenioParticularidades);
-
           const convenioAnotacoes = anotacoesMap.get(convenio.id) || [];
           allAnotacoes.push(...convenioAnotacoes);
+
+          // Processar benefícios das anotações (exceto SITE, DATA BASE e PARTICULARIDADE)
+          const beneficiosFromAnotacoes = convenioAnotacoes
+            .filter(anotacao => 
+              anotacao.coluna && 
+              !['SITE', 'DATA BASE', 'PARTICULARIDADE'].includes(anotacao.coluna.toUpperCase()) &&
+              anotacao.sugestao_particularidade && 
+              anotacao.sugestao_particularidade !== 'PARTICULARIDADE'
+            )
+            .map(anotacao => ({
+              titulo: anotacao.sugestao_particularidade || 'Outros',
+              campo_formatado: anotacao.campo_formatado,
+              registro_idx: anotacao.registro_idx
+            }));
+          
+          allBeneficios.push(...beneficiosFromAnotacoes);
+
+          // Processar particularidades das anotações
+          const particularidadesFromAnotacoes = convenioAnotacoes
+            .filter(anotacao => 
+              anotacao.sugestao_particularidade === 'PARTICULARIDADE' ||
+              (anotacao.coluna && anotacao.coluna.toUpperCase() === 'PARTICULARIDADE')
+            )
+            .map(anotacao => ({
+              categoria: 'PARTICULARIDADE',
+              conteudo: anotacao.campo_formatado,
+              detalhe: null,
+              registro_idx: anotacao.registro_idx
+            }));
+          
+          allParticularidades.push(...particularidadesFromAnotacoes);
 
           // Para cada cargo, buscar valores hora, jornadas e pisos
           conveniosCargos.forEach(cargo => {
@@ -360,6 +361,27 @@ const PainelSindicatos = () => {
     }));
   };
 
+  const toggleCargos = (sindicatoId: string) => {
+    setExpandedCargos(prev => ({
+      ...prev,
+      [sindicatoId]: !prev[sindicatoId]
+    }));
+  };
+
+  const toggleBeneficios = (sindicatoId: string) => {
+    setExpandedBeneficios(prev => ({
+      ...prev,
+      [sindicatoId]: !prev[sindicatoId]
+    }));
+  };
+
+  const toggleParticularidades = (sindicatoId: string) => {
+    setExpandedParticularidades(prev => ({
+      ...prev,
+      [sindicatoId]: !prev[sindicatoId]
+    }));
+  };
+
   const toggleValoresHora = (cargoId: string) => {
     setExpandedValoresHora(prev => ({
       ...prev,
@@ -375,18 +397,15 @@ const PainelSindicatos = () => {
     }).format(value);
   };
 
-  const groupBeneficiosBySugestao = (beneficios: BeneficioData[], anotacoes: AnotacaoData[]) => {
+  const groupBeneficiosByTitulo = (beneficios: BeneficioData[]) => {
     const grouped: {[key: string]: BeneficioData[]} = {};
     
     beneficios.forEach(beneficio => {
-      // Buscar sugestão de particularidade nas anotações pelo registro_idx
-      const anotacao = anotacoes.find(a => a.registro_idx === beneficio.registro_idx);
-      const sugestao = anotacao?.sugestao_particularidade || 'Outros';
-      
-      if (!grouped[sugestao]) {
-        grouped[sugestao] = [];
+      const titulo = beneficio.titulo || 'Outros';
+      if (!grouped[titulo]) {
+        grouped[titulo] = [];
       }
-      grouped[sugestao].push(beneficio);
+      grouped[titulo].push(beneficio);
     });
     
     return grouped;
@@ -536,18 +555,10 @@ const PainelSindicatos = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 auto-fit-cards">
-          <style>{`
-            .auto-fit-cards {
-              grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-              gap: 1.5rem;
-            }
-            @media (max-width: 768px) {
-              .auto-fit-cards {
-                grid-template-columns: 1fr;
-              }
-            }
-          `}</style>
+        <div className="grid gap-6" style={{
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+          gridAutoRows: 'auto'
+        }}>
           {filteredEstados.map((estado) => (
             <div key={estado.sigla} className="estado-card fade-in" data-estado={estado.sigla.toLowerCase()}>
               <Card className="overflow-hidden hover-scale h-full flex flex-col">
@@ -600,120 +611,152 @@ const PainelSindicatos = () => {
                               </div>
                             </div>
 
-                            {/* Cargos e Remuneração */}
+                            {/* Cargos e Remuneração - Collapsible */}
                             {sindicato.cargos && sindicato.cargos.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="font-medium text-xs text-accent-foreground">Cargos e Remuneração</h4>
-                                <div className="space-y-3">
-                                  {prepareCargoData(sindicato).map((cargoData) => (
-                                    <div key={cargoData.id} className="bg-muted/20 p-3 rounded border">
-                                      {/* Cargo Info */}
-                                      <div className="mb-3">
-                                        <div className="font-medium text-sm">{cargoData.cargo}</div>
-                                        {cargoData.cbo && (
-                                          <div className="text-xs text-muted-foreground">CBO: {cargoData.cbo}</div>
+                              <Collapsible 
+                                open={expandedCargos[sindicato.id]} 
+                                onOpenChange={() => toggleCargos(sindicato.id)}
+                              >
+                                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary w-full text-left py-2">
+                                  <ChevronRight className={cn(
+                                    "h-4 w-4 transition-transform",
+                                    expandedCargos[sindicato.id] && "transform rotate-90"
+                                  )} />
+                                  Cargos e Remuneração ({sindicato.cargos.length})
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="mt-2">
+                                  <div className="space-y-3">
+                                    {prepareCargoData(sindicato).map((cargoData) => (
+                                      <div key={cargoData.id} className="bg-muted/20 p-3 rounded border">
+                                        {/* Cargo Info */}
+                                        <div className="mb-3">
+                                          <div className="font-medium text-sm">{cargoData.cargo}</div>
+                                          {cargoData.cbo && (
+                                            <div className="text-xs text-muted-foreground">CBO: {cargoData.cbo}</div>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Carga Horária e Piso Salarial lado a lado */}
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                          <div>
+                                            <div className="text-xs font-medium mb-1">Carga Horária</div>
+                                            {cargoData.jornadas.map((jornada, idx) => (
+                                              <div key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mb-1">
+                                                {jornada.valor} {jornada.unidade}
+                                              </div>
+                                            ))}
+                                          </div>
+                                          <div>
+                                            <div className="text-xs font-medium mb-1">Piso Salarial</div>
+                                            {cargoData.pisos.map((piso, idx) => (
+                                              <div key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs mb-1">
+                                                <div className="font-medium">
+                                                  {formatCurrency(piso.valor)}
+                                                  {piso.descricao && piso.descricao.toUpperCase() !== 'PISO SALARIAL' && (
+                                                    <span className="text-xs ml-1">({piso.descricao})</span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Valores Hora - Collapsible horizontal */}
+                                        {cargoData.valores.length > 0 && (
+                                          <Collapsible 
+                                            open={expandedValoresHora[cargoData.id]} 
+                                            onOpenChange={() => toggleValoresHora(cargoData.id)}
+                                          >
+                                            <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium hover:text-primary w-full text-left">
+                                              <ChevronRight className={cn(
+                                                "h-3 w-3 transition-transform",
+                                                expandedValoresHora[cargoData.id] && "transform rotate-90"
+                                              )} />
+                                              Valores Hora ({cargoData.valores.length})
+                                            </CollapsibleTrigger>
+                                            <CollapsibleContent className="mt-2">
+                                              <div className="flex flex-wrap gap-2">
+                                                {cargoData.valores.map((valor, idx) => (
+                                                  <div key={idx} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                                                    <div className="font-medium">{valor.descricao || 'Valor'}</div>
+                                                    <div>{formatCurrency(valor.valor)}</div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </CollapsibleContent>
+                                          </Collapsible>
                                         )}
                                       </div>
-                                      
-                                      {/* Carga Horária e Piso Salarial lado a lado */}
-                                      <div className="grid grid-cols-2 gap-2 mb-2">
-                                        <div>
-                                          <div className="text-xs font-medium mb-1">Carga Horária</div>
-                                          {cargoData.jornadas.map((jornada, idx) => (
-                                            <div key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mb-1">
-                                              {jornada.valor} {jornada.unidade}
-                                            </div>
-                                          ))}
-                                        </div>
-                                        <div>
-                                          <div className="text-xs font-medium mb-1">Piso Salarial</div>
-                                          {cargoData.pisos.map((piso, idx) => (
-                                            <div key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs mb-1">
-                                              <div className="font-medium">
-                                                {formatCurrency(piso.valor)}
-                                                {piso.descricao && piso.descricao.toUpperCase() !== 'PISO SALARIAL' && (
-                                                  <span className="text-xs ml-1">({piso.descricao})</span>
-                                                )}
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Valores Hora - Collapsible horizontal */}
-                                      {cargoData.valores.length > 0 && (
-                                        <Collapsible 
-                                          open={expandedValoresHora[cargoData.id]} 
-                                          onOpenChange={() => toggleValoresHora(cargoData.id)}
-                                        >
-                                          <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium hover:text-primary w-full text-left">
-                                            <ChevronRight className={cn(
-                                              "h-3 w-3 transition-transform",
-                                              expandedValoresHora[cargoData.id] && "transform rotate-90"
-                                            )} />
-                                            Valores Hora ({cargoData.valores.length})
-                                          </CollapsibleTrigger>
-                                          <CollapsibleContent className="mt-2">
-                                            <div className="flex flex-wrap gap-2">
-                                              {cargoData.valores.map((valor, idx) => (
-                                                <div key={idx} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
-                                                  <div className="font-medium">{valor.descricao || 'Valor'}</div>
-                                                  <div>{formatCurrency(valor.valor)}</div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </CollapsibleContent>
-                                        </Collapsible>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
+                                    ))}
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
                             )}
 
-                            {/* Benefícios Agrupados por Sugestão de Particularidade */}
+                            {/* Benefícios Agrupados por Título - Collapsible */}
                             {sindicato.beneficios && sindicato.beneficios.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="font-medium text-xs text-accent-foreground">Benefícios</h4>
-                                <div className="space-y-3">
-                                  {Object.entries(groupBeneficiosBySugestao(sindicato.beneficios, sindicato.anotacoes)).map(([sugestao, beneficios]) => (
-                                    <div key={sugestao} className="bg-muted/20 p-3 rounded border">
-                                      <div className="font-medium text-sm mb-2">{sugestao}</div>
-                                      <div className="space-y-1">
-                                        {beneficios
-                                          .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
-                                          .map((beneficio, i) => (
-                                          <div key={i} className="bg-green-100 text-green-800 p-2 rounded text-xs">
-                                            <div className="font-medium">{beneficio.descricao || beneficio.nome}</div>
-                                            <div>{beneficio.valor || '-'}</div>
-                                          </div>
-                                        ))}
+                              <Collapsible 
+                                open={expandedBeneficios[sindicato.id]} 
+                                onOpenChange={() => toggleBeneficios(sindicato.id)}
+                              >
+                                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary w-full text-left py-2">
+                                  <ChevronRight className={cn(
+                                    "h-4 w-4 transition-transform",
+                                    expandedBeneficios[sindicato.id] && "transform rotate-90"
+                                  )} />
+                                  Benefícios ({sindicato.beneficios.length})
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="mt-2">
+                                  <div className="space-y-3">
+                                    {Object.entries(groupBeneficiosByTitulo(sindicato.beneficios)).map(([titulo, beneficios]) => (
+                                      <div key={titulo} className="bg-muted/20 p-3 rounded border">
+                                        <div className="font-medium text-sm mb-2">{titulo}</div>
+                                        <div className="space-y-1">
+                                          {beneficios
+                                            .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
+                                            .map((beneficio, i) => (
+                                            <div key={i} className="bg-green-100 text-green-800 p-2 rounded text-xs">
+                                              <div>{beneficio.campo_formatado}</div>
+                                            </div>
+                                          ))}
+                                        </div>
                                       </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
+                                    ))}
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
                             )}
 
-                            {/* Particularidades usando campo detalhe */}
+                            {/* Particularidades - Collapsible */}
                             {sindicato.particularidades && sindicato.particularidades.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="font-medium text-xs text-accent-foreground">Particularidades</h4>
-                                <div className="space-y-2">
-                                  {sindicato.particularidades
-                                    .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
-                                    .map((part, i) => (
-                                    <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-                                      {part.detalhe && (
-                                        <div className="font-medium mb-1">{part.detalhe}</div>
-                                      )}
-                                      {part.conteudo && (
-                                        <div>{part.conteudo}</div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
+                              <Collapsible 
+                                open={expandedParticularidades[sindicato.id]} 
+                                onOpenChange={() => toggleParticularidades(sindicato.id)}
+                              >
+                                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary w-full text-left py-2">
+                                  <ChevronRight className={cn(
+                                    "h-4 w-4 transition-transform",
+                                    expandedParticularidades[sindicato.id] && "transform rotate-90"
+                                  )} />
+                                  Particularidades ({sindicato.particularidades.length})
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="mt-2">
+                                  <div className="space-y-2">
+                                    {sindicato.particularidades
+                                      .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
+                                      .map((part, i) => (
+                                      <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
+                                        {part.detalhe && (
+                                          <div className="font-medium mb-1">{part.detalhe}</div>
+                                        )}
+                                        {part.conteudo && (
+                                          <div>{part.conteudo}</div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
                             )}
                             
                             <div className="pt-2 mt-4 border-t text-center">
