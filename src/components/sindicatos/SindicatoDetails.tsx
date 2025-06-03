@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { SindicatoData } from "@/types/sindicatos";
 import { getInformacoesSindicato, prepareCargoData } from "@/utils/sindicatosUtils";
@@ -54,9 +55,7 @@ export function SindicatoDetails({ sindicato }: SindicatoDetailsProps) {
 
       {/* Particularidades */}
       {sindicato.particularidades && sindicato.particularidades.length > 0 && (
-        <ParticularidadesSection 
-          particularidades={sindicato.particularidades}
-        />
+        <ParticularidadesSection particularidades={sindicato.particularidades} />
       )}
     </>
   );
