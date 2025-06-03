@@ -68,10 +68,9 @@ export function BeneficiosSection({ beneficios, anotacoes }: BeneficiosSectionPr
                         </div>
                       )}
                       
-                      {/* Valor do benefício */}
+                      {/* Valor do benefício - removendo o termo "Valor:" */}
                       {beneficio.valor && (
                         <div className="text-sm font-semibold bg-green-50 p-2 rounded border">
-                          <span className="font-medium">Valor: </span>
                           {beneficio.valor}
                         </div>
                       )}

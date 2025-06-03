@@ -55,7 +55,10 @@ export function SindicatoDetails({ sindicato }: SindicatoDetailsProps) {
 
       {/* Particularidades */}
       {sindicato.particularidades && sindicato.particularidades.length > 0 && (
-        <ParticularidadesSection particularidades={sindicato.particularidades} />
+        <ParticularidadesSection 
+          particularidades={sindicato.particularidades}
+          anotacoes={sindicato.anotacoes || []}
+        />
       )}
     </>
   );
