@@ -6,20 +6,18 @@ import { siglas_estados } from "@/types/sindicatos";
 
 interface SearchFiltersProps {
   searchTerm: string;
-  onSearchChange: (value: string) => void;
-  estadoFilter: string;
-  onEstadoChange: (value: string) => void;
-  categoriaFilter: string;
-  onCategoriaChange: (value: string) => void;
+  setSearchTerm: (value: string) => void;
+  selectedEstado: string;
+  setSelectedEstado: (value: string) => void;
+  estados: any[];
 }
 
 export function SearchFilters({
   searchTerm,
-  onSearchChange,
-  estadoFilter,
-  onEstadoChange,
-  categoriaFilter,
-  onCategoriaChange
+  setSearchTerm,
+  selectedEstado,
+  setSelectedEstado,
+  estados
 }: SearchFiltersProps) {
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_auto] mb-6">
@@ -29,18 +27,18 @@ export function SearchFilters({
           type="search"
           placeholder="Buscar por sindicato, cargo, estado ou qualquer informação..."
           value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10 py-6 rounded-full bg-white/20 backdrop-blur-md border-white/10 placeholder:text-muted-foreground focus:bg-white/30 transition-all"
         />
       </div>
       
       <div className="flex gap-4 flex-wrap">
-        <Select value={estadoFilter} onValueChange={onEstadoChange}>
+        <Select value={selectedEstado} onValueChange={setSelectedEstado}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filtrar por estado" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os estados</SelectItem>
+            <SelectItem value="">Todos os estados</SelectItem>
             {Object.entries(siglas_estados).map(([sigla, nome]) => (
               <SelectItem key={sigla} value={sigla}>
                 {nome}
@@ -49,7 +47,7 @@ export function SearchFilters({
           </SelectContent>
         </Select>
         
-        <Select value={categoriaFilter} onValueChange={onCategoriaChange}>
+        <Select value="" onValueChange={() => {}}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filtrar por categoria" />
           </SelectTrigger>
