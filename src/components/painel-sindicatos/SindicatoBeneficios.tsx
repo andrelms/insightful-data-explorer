@@ -50,17 +50,20 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
       <CollapsibleContent className="mt-2">
         <div className="space-y-3">
           {Object.entries(groupBeneficiosByTitulo(sindicato.beneficios)).map(([titulo, beneficios]) => (
-            <div key={titulo} className="bg-muted/20 p-3 rounded border">
-              <div className="font-medium text-sm mb-2">{titulo}</div>
-              <div className="space-y-1">
-                {beneficios
-                  .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
-                  .map((beneficio, i) => (
-                  <div key={i} className="bg-green-100 text-green-800 p-2 rounded text-xs">
-                    <div>{beneficio.campo_formatado}</div>
+            <div key={titulo} className="space-y-1">
+              <div className="font-medium text-sm text-muted-foreground">{titulo}</div>
+              {beneficios
+                .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
+                .map((beneficio, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="text-xs text-muted-foreground min-w-0 flex-shrink-0 font-medium">
+                    {beneficio.coluna}:
                   </div>
-                ))}
-              </div>
+                  <div className="bg-green-100 text-green-800 p-2 rounded text-xs flex-1">
+                    {beneficio.campo_formatado}
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
         </div>
