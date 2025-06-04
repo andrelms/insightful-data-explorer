@@ -50,7 +50,9 @@ export function PainelSindicatosHeader({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os estados</SelectItem>
-              {Object.entries(siglas_estados).map(([sigla, nome]) => (
+              {Object.entries(siglas_estados)
+                .filter(([sigla, nome]) => sigla && sigla.trim() !== '' && nome && nome.trim() !== '')
+                .map(([sigla, nome]) => (
                 <SelectItem key={sigla} value={sigla}>
                   {nome}
                 </SelectItem>
