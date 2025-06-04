@@ -38,7 +38,7 @@ export function SearchFilters({
             <SelectValue placeholder="Filtrar por estado" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os estados</SelectItem>
+            <SelectItem value="todos">Todos os estados</SelectItem>
             {Object.entries(siglas_estados).map(([sigla, nome]) => (
               <SelectItem key={sigla} value={sigla}>
                 {nome}
@@ -47,12 +47,12 @@ export function SearchFilters({
           </SelectContent>
         </Select>
         
-        <Select value="" onValueChange={() => {}}>
+        <Select value="todos" onValueChange={() => {}}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filtrar por categoria" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas as categorias</SelectItem>
+            <SelectItem value="todos">Todas as categorias</SelectItem>
             <SelectItem value="hora-extra">Hora Extra</SelectItem>
             <SelectItem value="piso">Piso Salarial</SelectItem>
             <SelectItem value="beneficios">Benefícios</SelectItem>

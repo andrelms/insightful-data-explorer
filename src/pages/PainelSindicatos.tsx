@@ -7,18 +7,25 @@ import { useState } from "react";
 export default function PainelSindicatos() {
   const { dados, loading } = useSindicatosData();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEstado, setSelectedEstado] = useState("");
+  const [selectedEstado, setSelectedEstado] = useState("todos");
 
   // Filtrar dados
   const filteredDados = dados.filter(estado => {
-    if (selectedEstado && estado.sigla !== selectedEstado) return false;
+    // Filtro por estado
+    if (selectedEstado !== "todos" && selectedEstado !== "" && estado.sigla !== selectedEstado) {
+      return false;
+    }
     
-    if (searchTerm) {
+    // Filtro por termo de busca
+    if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       return estado.sindicatos.some(sindicato => 
         sindicato.nome.toLowerCase().includes(term) ||
-        sindicato.cnpj?.toLowerCase().includes(term) ||
-        sindicato.cargos.some(cargo => cargo.cargo.toLowerCase().includes(term))
+        (sindicato.cnpj && sindicato.cnpj.toLowerCase().includes(term)) ||
+        (sindicato.site && sindicato.site.toLowerCase().includes(term)) ||
+        sindicato.cargos.some(cargo => cargo.cargo.toLowerCase().includes(term)) ||
+        estado.nome.toLowerCase().includes(term) ||
+        estado.sigla.toLowerCase().includes(term)
       );
     }
     

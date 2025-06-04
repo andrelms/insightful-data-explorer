@@ -19,7 +19,7 @@ interface CargosSectionProps {
 }
 
 export function CargosSection({ cargoData }: CargosSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [expandedValoresHora, setExpandedValoresHora] = useState<Record<string, boolean>>({});
 
   const toggleValoresHora = (cargoId: string) => {
@@ -39,68 +39,78 @@ export function CargosSection({ cargoData }: CargosSectionProps) {
         )} />
       </CollapsibleTrigger>
       
-      <CollapsibleContent className="space-y-2 mt-2">
-        {/* Grade responsiva para cargos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <CollapsibleContent className="space-y-3 mt-2">
+        {/* Grade responsiva melhorada para cargos */}
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3">
           {cargoData.map((cargoItem) => (
-            <div key={cargoItem.id} className="bg-muted/20 p-3 rounded border flex flex-col h-full">
+            <div key={cargoItem.id} className="bg-muted/20 p-3 rounded border flex flex-col h-full min-h-[200px]">
               {/* Cargo Info */}
-              <div className="mb-3">
-                <div className="font-medium text-sm line-clamp-2">{cargoItem.cargo}</div>
+              <div className="mb-3 flex-shrink-0">
+                <div className="font-medium text-sm line-clamp-2 mb-1">{cargoItem.cargo}</div>
                 {cargoItem.cbo && (
                   <div className="text-xs text-muted-foreground">CBO: {cargoItem.cbo}</div>
                 )}
               </div>
               
               {/* Carga Horária */}
-              <div className="mb-2">
-                <div className="text-xs font-medium mb-1">Carga Horária</div>
-                {cargoItem.jornadas.map((jornada, idx) => (
-                  <div key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mb-1">
-                    {jornada.valor} {jornada.unidade}
+              {cargoItem.jornadas.length > 0 && (
+                <div className="mb-2 flex-shrink-0">
+                  <div className="text-xs font-medium mb-1">Carga Horária</div>
+                  <div className="flex flex-wrap gap-1">
+                    {cargoItem.jornadas.map((jornada, idx) => (
+                      <div key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                        {jornada.valor} {jornada.unidade}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
 
               {/* Piso Salarial */}
-              <div className="mb-2 flex-1">
-                <div className="text-xs font-medium mb-1">Piso Salarial</div>
-                {cargoItem.pisos.map((piso, idx) => (
-                  <div key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs mb-1">
-                    <div className="font-medium">
-                      {formatCurrency(piso.valor)}
-                      {piso.descricao && piso.descricao.toUpperCase() !== 'PISO SALARIAL' && (
-                        <span className="text-xs ml-1">({piso.descricao})</span>
-                      )}
-                    </div>
+              {cargoItem.pisos.length > 0 && (
+                <div className="mb-2 flex-1">
+                  <div className="text-xs font-medium mb-1">Piso Salarial</div>
+                  <div className="space-y-1">
+                    {cargoItem.pisos.map((piso, idx) => (
+                      <div key={idx} className="bg-green-100 text-green-800 p-2 rounded text-xs">
+                        <div className="font-medium">
+                          {formatCurrency(piso.valor)}
+                        </div>
+                        {piso.descricao && piso.descricao.toUpperCase() !== 'PISO SALARIAL' && (
+                          <div className="text-xs mt-1 opacity-80">{piso.descricao}</div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
               
               {/* Valores Hora - Collapsible */}
               {cargoItem.valores.length > 0 && (
-                <Collapsible 
-                  open={expandedValoresHora[cargoItem.id]} 
-                  onOpenChange={() => toggleValoresHora(cargoItem.id)}
-                >
-                  <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium hover:text-primary w-full text-left">
-                    <ChevronDown className={cn(
-                      "h-3 w-3 transition-transform",
-                      expandedValoresHora[cargoItem.id] && "transform rotate-90"
-                    )} />
-                    Valores Hora ({cargoItem.valores.length})
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2">
-                    <div className="flex flex-wrap gap-1">
-                      {cargoItem.valores.map((valor, idx) => (
-                        <div key={idx} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
-                          <div className="font-medium text-xs">{valor.descricao || 'Valor'}</div>
-                          <div className="text-xs">{formatCurrency(valor.valor)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                <div className="mt-auto">
+                  <Collapsible 
+                    open={expandedValoresHora[cargoItem.id]} 
+                    onOpenChange={() => toggleValoresHora(cargoItem.id)}
+                  >
+                    <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium hover:text-primary w-full text-left p-1 rounded hover:bg-muted/30">
+                      <ChevronDown className={cn(
+                        "h-3 w-3 transition-transform",
+                        expandedValoresHora[cargoItem.id] && "transform rotate-90"
+                      )} />
+                      Valores Hora ({cargoItem.valores.length})
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <div className="grid grid-cols-1 gap-1">
+                        {cargoItem.valores.map((valor, idx) => (
+                          <div key={idx} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
+                            <div className="font-medium text-xs">{valor.descricao || 'Valor'}</div>
+                            <div className="text-xs">{formatCurrency(valor.valor)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               )}
             </div>
           ))}
