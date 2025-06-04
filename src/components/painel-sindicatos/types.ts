@@ -46,7 +46,6 @@ export interface ValorHoraData {
 
 export interface BeneficioData {
   titulo: string;
-  coluna: string;
   campo_formatado: string;
   registro_idx: number | null;
 }
