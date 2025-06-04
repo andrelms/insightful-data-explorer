@@ -19,21 +19,38 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
     }));
   };
 
-  const groupBeneficiosByColuna = (beneficios: BeneficioData[]) => {
-    const grouped: {[key: string]: BeneficioData[]} = {};
+  const getBeneficiosFromAnotacoes = () => {
+    if (!sindicato.anotacoes) return [];
     
-    beneficios.forEach(beneficio => {
-      const coluna = beneficio.coluna || 'Outros';
-      if (!grouped[coluna]) {
-        grouped[coluna] = [];
-      }
-      grouped[coluna].push(beneficio);
-    });
-    
-    return grouped;
+    return sindicato.anotacoes
+      .filter(anotacao => 
+        anotacao.coluna && 
+        !['PARTICULARIDADE', 'DATA BASE', 'SITE'].includes(anotacao.coluna.toUpperCase())
+      )
+      .map(anotacao => ({
+        coluna: anotacao.coluna,
+        sugestao_particularidade: anotacao.sugestao_particularidade,
+        campo_formatado: anotacao.campo_formatado,
+        registro_idx: anotacao.registro_idx
+      }))
+      .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0));
   };
 
-  if (!sindicato.beneficios || sindicato.beneficios.length === 0) return null;
+  const getParticularidades = () => {
+    const particularidadesFromAnotacoes = sindicato.anotacoes?.filter(anotacao =>
+      anotacao.coluna?.toUpperCase() === 'PARTICULARIDADE'
+    ) || [];
+
+    const particularidadesFromTable = sindicato.particularidades || [];
+
+    return [...particularidadesFromAnotacoes, ...particularidadesFromTable]
+      .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0));
+  };
+
+  const beneficiosData = getBeneficiosFromAnotacoes();
+  const particularidadesData = getParticularidades();
+
+  if (beneficiosData.length === 0 && particularidadesData.length === 0) return null;
 
   return (
     <Collapsible 
@@ -45,24 +62,48 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
           "h-4 w-4 transition-transform",
           expandedBeneficios[sindicato.id] && "transform rotate-90"
         )} />
-        Benefícios ({sindicato.beneficios.length})
+        Benefícios ({beneficiosData.length + particularidadesData.length})
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2">
-        <div className="grid grid-cols-1 gap-3">
-          {Object.entries(groupBeneficiosByColuna(sindicato.beneficios)).map(([coluna, beneficios]) => (
-            <div key={coluna} className="bg-green-100 text-green-800 p-3 rounded-lg border-l-4 border-green-500">
-              <div className="font-semibold text-sm mb-2">{coluna}</div>
+        <div className="space-y-3">
+          {/* Benefícios das anotações */}
+          {beneficiosData.map((beneficio, i) => (
+            <div key={`beneficio-${i}`} className="bg-green-100 text-green-800 p-3 rounded-lg border-l-4 border-green-500">
+              <div className="font-semibold text-sm mb-1">{beneficio.coluna}</div>
+              {beneficio.sugestao_particularidade && (
+                <div className="text-xs font-medium text-green-700 mb-1">
+                  {beneficio.sugestao_particularidade}
+                </div>
+              )}
+              <div className="text-xs">
+                {beneficio.campo_formatado}
+              </div>
+            </div>
+          ))}
+          
+          {/* Particularidades */}
+          {particularidadesData.length > 0 && (
+            <div className="bg-orange-100 text-orange-800 p-3 rounded-lg border-l-4 border-orange-500">
+              <div className="font-semibold text-sm mb-2">PARTICULARIDADE</div>
               <div className="space-y-1">
-                {beneficios
-                  .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
-                  .map((beneficio, i) => (
-                  <div key={i} className="text-xs">
-                    {beneficio.campo_formatado}
+                {particularidadesData.map((part, i) => (
+                  <div key={`part-${i}`} className="text-xs">
+                    {part.campo_formatado || part.conteudo}
+                    {part.detalhe && (
+                      <div className="mt-1 text-orange-700">
+                        {part.detalhe}
+                      </div>
+                    )}
+                    {part.conteudo && part.campo_formatado && (
+                      <div className="mt-1 text-orange-700">
+                        {part.conteudo}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>
