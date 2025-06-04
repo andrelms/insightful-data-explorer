@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { SindicatoData, BeneficioData } from "./types";
+import { SindicatoData } from "./types";
 
 interface SindicatoBeneficiosProps {
   sindicato: SindicatoData;
@@ -66,7 +66,7 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2">
         <div className="space-y-3">
-          {/* Benefícios das anotações */}
+          {/* Benefícios das anotações - organizados por coluna */}
           {beneficiosData.map((beneficio, i) => (
             <div key={`beneficio-${i}`} className="bg-green-100 text-green-800 p-3 rounded-lg border-l-4 border-green-500">
               <div className="font-semibold text-sm mb-1">{beneficio.coluna}</div>
@@ -88,15 +88,11 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
               <div className="space-y-1">
                 {particularidadesData.map((part, i) => (
                   <div key={`part-${i}`} className="text-xs">
-                    {part.campo_formatado || part.conteudo}
+                    {/* Para anotações use campo_formatado, para particularidades use conteudo */}
+                    {'campo_formatado' in part && part.campo_formatado ? part.campo_formatado : part.conteudo}
                     {part.detalhe && (
                       <div className="mt-1 text-orange-700">
                         {part.detalhe}
-                      </div>
-                    )}
-                    {part.conteudo && part.campo_formatado && (
-                      <div className="mt-1 text-orange-700">
-                        {part.conteudo}
                       </div>
                     )}
                   </div>

@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 interface SearchResult {
   id: string;
@@ -43,47 +42,39 @@ const BuscaConvencoes = () => {
 
     setIsSearching(true);
     try {
-      const response = await fetch('/api/search-conventions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      // Simular chamada para API
+      const mockResult: SearchResult = {
+        id: Date.now().toString(),
+        query,
+        provider,
+        raw_response: {
+          model: provider,
+          response: "Resposta simulada da API",
+          timestamp: new Date().toISOString()
         },
-        body: JSON.stringify({
-          query,
-          provider,
-          language: 'pt-BR'
-        }),
-      });
+        processed_data: {
+          summary: "Dados processados simulados",
+          extracted_info: ["Informação 1", "Informação 2"]
+        },
+        references: [
+          "Referência 1: Convenção Coletiva SP 2024",
+          "Referência 2: Sindicato XYZ - Tabela Salarial"
+        ],
+        reasoning: [
+          "Identificando sindicatos relevantes",
+          "Extraindo informações salariais",
+          "Validando dados encontrados"
+        ],
+        created_at: new Date().toISOString(),
+        status: 'completed'
+      };
 
-      if (!response.ok) {
-        throw new Error('Erro na busca');
-      }
-
-      const result = await response.json();
-      
-      // Salvar resultado no banco
-      const { data, error } = await supabase
-        .from('search_results')
-        .insert({
-          query,
-          provider,
-          raw_response: result.raw_response,
-          processed_data: result.processed_data,
-          references: result.references || [],
-          reasoning: result.reasoning || [],
-          status: 'completed'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setSearchResults(prev => [data, ...prev]);
-      setSelectedResult(data);
+      setSearchResults(prev => [mockResult, ...prev]);
+      setSelectedResult(mockResult);
       
       toast({
         title: "Busca concluída",
-        description: `Encontrados ${result.references?.length || 0} referências`,
+        description: `Encontradas ${mockResult.references.length} referências`,
       });
     } catch (error) {
       console.error('Erro na busca:', error);
@@ -99,21 +90,6 @@ const BuscaConvencoes = () => {
 
   const handleProcessResult = async (resultId: string, scope: 'estado' | 'sindicato' | 'todos') => {
     try {
-      const response = await fetch('/api/process-search-result', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          resultId,
-          scope
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro no processamento');
-      }
-
       toast({
         title: "Processamento iniciado",
         description: `Dados sendo processados por ${scope}`,

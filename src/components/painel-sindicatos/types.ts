@@ -56,6 +56,7 @@ export interface ParticularidadeData {
   conteudo: string | null;
   detalhe: string | null;
   registro_idx: number | null;
+  campo_formatado?: string;
 }
 
 export interface AnotacaoData {
@@ -63,6 +64,8 @@ export interface AnotacaoData {
   campo_formatado: string;
   sugestao_particularidade: string | null;
   registro_idx: number | null;
+  conteudo?: string;
+  detalhe?: string;
 }
 
 export interface EstadoSindicatos {

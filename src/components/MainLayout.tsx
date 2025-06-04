@@ -1,6 +1,5 @@
-
 import { ReactNode, useState, useEffect } from "react";
-import Sidebar from "./Sidebar";
+import { Sidebar } from "./Sidebar";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Menu, Bell, MessageSquare } from "lucide-react";
