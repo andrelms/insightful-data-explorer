@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Search, Brain, FileText, Zap, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
+// Updated interface to match database structure
 interface SearchResult {
   id: string;
   query: string;
@@ -36,6 +37,22 @@ interface BatchProcessing {
   created_at: string;
   updated_at: string;
 }
+
+// Type conversion helper
+const convertDatabaseResultToSearchResult = (dbResult: any): SearchResult => {
+  return {
+    id: dbResult.id,
+    query: dbResult.query,
+    provider: dbResult.provider as 'gemini' | 'perplexity' | 'jina',
+    raw_response: dbResult.raw_response,
+    processed_data: dbResult.processed_data,
+    referencia_fontes: dbResult.referencia_fontes || [],
+    etapas_raciocinio: dbResult.etapas_raciocinio || [],
+    status: dbResult.status as 'pending' | 'processing' | 'completed' | 'error',
+    created_at: dbResult.created_at,
+    updated_at: dbResult.updated_at,
+  };
+};
 
 const BuscaConvencoes = () => {
   const [query, setQuery] = useState("");
@@ -87,7 +104,9 @@ const BuscaConvencoes = () => {
         .limit(10);
 
       if (error) throw error;
-      setSearchResults(data || []);
+      
+      const convertedResults = data?.map(convertDatabaseResultToSearchResult) || [];
+      setSearchResults(convertedResults);
     } catch (error) {
       console.error('Erro ao carregar histórico:', error);
     }
@@ -148,8 +167,9 @@ const BuscaConvencoes = () => {
 
       if (error) throw error;
 
-      setCurrentResult(newResult);
-      setSearchResults(prev => [newResult, ...prev]);
+      const convertedResult = convertDatabaseResultToSearchResult(newResult);
+      setCurrentResult(convertedResult);
+      setSearchResults(prev => [convertedResult, ...prev]);
 
       toast({
         title: "Busca concluída",
