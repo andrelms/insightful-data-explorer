@@ -1,59 +1,71 @@
 
-import { Search } from "lucide-react";
-import { PainelSindicatosHeader } from "@/components/painel-sindicatos/PainelSindicatosHeader";
-import { SindicatoCard } from "@/components/painel-sindicatos/SindicatoCard";
-import { usePainelSindicatos } from "@/components/painel-sindicatos/usePainelSindicatos";
+import { useSindicatosData } from "@/hooks/useSindicatosData";
+import { EstadoCard } from "@/components/sindicatos/EstadoCard";
+import { SearchFilters } from "@/components/sindicatos/SearchFilters";
+import { useState } from "react";
 
-const PainelSindicatos = () => {
-  const {
-    searchTerm,
-    setSearchTerm,
-    estadoFilter,
-    setEstadoFilter,
-    categoriaFilter,
-    setCategoriaFilter,
-    loading,
-    filteredEstados,
-    siglas_estados
-  } = usePainelSindicatos();
-  
+export default function PainelSindicatos() {
+  const { dados, loading } = useSindicatosData();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedEstado, setSelectedEstado] = useState("");
+
+  // Filtrar dados
+  const filteredDados = dados.filter(estado => {
+    if (selectedEstado && estado.sigla !== selectedEstado) return false;
+    
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      return estado.sindicatos.some(sindicato => 
+        sindicato.nome.toLowerCase().includes(term) ||
+        sindicato.cnpj?.toLowerCase().includes(term) ||
+        sindicato.cargos.some(cargo => cargo.cargo.toLowerCase().includes(term))
+      );
+    }
+    
+    return true;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <PainelSindicatosHeader
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold">Painel de Sindicatos</h1>
+        <p className="text-muted-foreground">
+          Explore informações detalhadas sobre sindicatos e convenções coletivas
+        </p>
+      </div>
+
+      <SearchFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
-        estadoFilter={estadoFilter}
-        setEstadoFilter={setEstadoFilter}
-        categoriaFilter={categoriaFilter}
-        setCategoriaFilter={setCategoriaFilter}
-        siglas_estados={siglas_estados}
+        selectedEstado={selectedEstado}
+        setSelectedEstado={setSelectedEstado}
+        estados={dados}
       />
-      
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+
+      {filteredDados.length === 0 ? (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium text-muted-foreground mb-2">
+            Nenhum resultado encontrado
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Tente ajustar os filtros ou termo de busca
+          </p>
         </div>
       ) : (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {filteredEstados.map((estado) => (
-            <SindicatoCard key={estado.sigla} estado={estado} />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
+          {filteredDados.map((estado, index) => (
+            <EstadoCard key={estado.sigla} estado={estado} />
           ))}
-          
-          {filteredEstados.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center p-8 text-center">
-              <div className="rounded-full bg-muted/40 p-4 mb-4">
-                <Search className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-xl font-medium mb-1">Nenhum resultado encontrado</h3>
-              <p className="text-muted-foreground max-w-md">
-                Não encontramos resultados para sua busca. Tente outros termos ou remova os filtros.
-              </p>
-            </div>
-          )}
         </div>
       )}
     </div>
   );
-};
-
-export default PainelSindicatos;
+}
