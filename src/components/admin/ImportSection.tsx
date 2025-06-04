@@ -2,6 +2,7 @@
 import { FileUploadSection } from "@/components/admin/FileUploadSection";
 import { ReprocessingSection } from "@/components/admin/ReprocessingSection";
 import { ImportHistory } from "@/components/admin/ImportHistory";
+import { GeminiEnrichmentSection } from "@/components/admin/GeminiEnrichmentSection";
 import { useFileProcessing } from "@/hooks/useFileProcessing";
 
 export function ImportSection() {
@@ -22,6 +23,7 @@ export function ImportSection() {
         isReprocessing={isReprocessing} 
         onReprocess={reprocessFile} 
       />
+      <GeminiEnrichmentSection />
       <ImportHistory />
     </div>
   );
