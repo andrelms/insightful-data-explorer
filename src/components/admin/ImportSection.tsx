@@ -22,7 +22,6 @@ export function ImportSection() {
         isReprocessing={isReprocessing} 
         onReprocess={reprocessFile} 
       />
-      <GeminiEnrichmentSection />
       <ImportHistory />
     </div>
   );
