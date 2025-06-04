@@ -1,3 +1,4 @@
+
 import { ReactNode, useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { ThemeToggle } from "./ThemeToggle";
@@ -81,7 +82,7 @@ export function MainLayout({
   return (
     <div className="flex min-h-screen bg-[#f5faff] dark:bg-[#0f172a] transition-colors duration-300">
       {/* Sidebar */}
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col">

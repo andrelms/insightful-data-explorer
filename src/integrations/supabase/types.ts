@@ -91,6 +91,50 @@ export type Database = {
           },
         ]
       }
+      batch_processing: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          processed_count: number | null
+          scope: string
+          search_result_id: string
+          status: string
+          total_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          processed_count?: number | null
+          scope: string
+          search_result_id: string
+          status?: string
+          total_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          processed_count?: number | null
+          scope?: string
+          search_result_id?: string
+          status?: string
+          total_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_processing_search_result_id_fkey"
+            columns: ["search_result_id"]
+            isOneToOne: false
+            referencedRelation: "search_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       beneficios_gerais: {
         Row: {
           categoria: string | null
@@ -525,6 +569,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      search_results: {
+        Row: {
+          created_at: string
+          etapas_raciocinio: string[] | null
+          id: string
+          processed_data: Json | null
+          provider: string
+          query: string
+          raw_response: Json
+          referencia_fontes: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          etapas_raciocinio?: string[] | null
+          id?: string
+          processed_data?: Json | null
+          provider: string
+          query: string
+          raw_response: Json
+          referencia_fontes?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          etapas_raciocinio?: string[] | null
+          id?: string
+          processed_data?: Json | null
+          provider?: string
+          query?: string
+          raw_response?: Json
+          referencia_fontes?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       sindicatos: {
         Row: {

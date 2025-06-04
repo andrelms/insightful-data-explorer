@@ -1,118 +1,243 @@
 
-import { useState } from "react";
-import { Search, Bot, FileText, Database, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Search, Brain, FileText, Zap, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface SearchResult {
   id: string;
   query: string;
-  provider: string;
+  provider: 'gemini' | 'perplexity' | 'jina';
   raw_response: any;
-  processed_data: any;
-  references: string[];
-  reasoning: string[];
-  created_at: string;
+  processed_data?: any;
+  referencia_fontes?: string[];
+  etapas_raciocinio?: string[];
   status: 'pending' | 'processing' | 'completed' | 'error';
+  created_at: string;
+  updated_at: string;
+}
+
+interface BatchProcessing {
+  id: string;
+  search_result_id: string;
+  scope: 'estado' | 'sindicato' | 'todos';
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  processed_count: number;
+  total_count: number;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 const BuscaConvencoes = () => {
   const [query, setQuery] = useState("");
-  const [provider, setProvider] = useState("gemini");
+  const [provider, setProvider] = useState<'gemini' | 'perplexity' | 'jina'>('gemini');
+  const [scope, setScope] = useState<'estado' | 'sindicato' | 'todos'>('todos');
+  const [searching, setSearching] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
+  const [currentResult, setCurrentResult] = useState<SearchResult | null>(null);
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
-  const handleSearch = async () => {
+  useEffect(() => {
+    loadApiKeys();
+    loadSearchHistory();
+  }, []);
+
+  const loadApiKeys = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('configuracoes')
+        .select('chave, valor')
+        .in('chave', ['GEMINI_API_KEY', 'PERPLEXITY_API_KEY', 'JINA_API_KEY']);
+
+      if (error) throw error;
+
+      const keys = data?.reduce((acc, item) => {
+        acc[item.chave] = item.valor || '';
+        return acc;
+      }, {} as Record<string, string>) || {};
+
+      setApiKeys(keys);
+    } catch (error) {
+      console.error('Erro ao carregar chaves:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar configurações das APIs",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadSearchHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('search_results')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setSearchResults(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+    }
+  };
+
+  const performSearch = async () => {
     if (!query.trim()) {
       toast({
         title: "Erro",
-        description: "Por favor, digite uma consulta para buscar",
+        description: "Digite uma consulta para buscar",
         variant: "destructive",
       });
       return;
     }
 
-    setIsSearching(true);
+    const apiKey = apiKeys[`${provider.toUpperCase()}_API_KEY`];
+    if (!apiKey) {
+      toast({
+        title: "Erro",
+        description: `Chave da API ${provider} não configurada. Acesse as configurações para adicionar.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSearching(true);
+
     try {
-      // Simular chamada para API
-      const mockResult: SearchResult = {
-        id: Date.now().toString(),
-        query,
-        provider,
-        raw_response: {
-          model: provider,
-          response: "Resposta simulada da API",
-          timestamp: new Date().toISOString()
-        },
-        processed_data: {
-          summary: "Dados processados simulados",
-          extracted_info: ["Informação 1", "Informação 2"]
-        },
-        references: [
-          "Referência 1: Convenção Coletiva SP 2024",
-          "Referência 2: Sindicato XYZ - Tabela Salarial"
+      // Simular resposta da API (substituir pela chamada real)
+      const mockResponse = {
+        resultado: `Resultados da busca para: "${query}"`,
+        fontes: [
+          "https://www.sindpd-sp.org.br/convencoes",
+          "https://www.fenainfo.org.br/documentos",
+          "Portal MTE - Convenções Coletivas"
         ],
-        reasoning: [
-          "Identificando sindicatos relevantes",
-          "Extraindo informações salariais",
-          "Validando dados encontrados"
-        ],
-        created_at: new Date().toISOString(),
-        status: 'completed'
+        raciocinio: [
+          "Analisando consulta sobre convenções coletivas",
+          "Buscando dados de sindicatos relevantes",
+          "Compilando informações por hierarquia: sindicatos > convenções > cargos",
+          "Filtrando resultados por relevância"
+        ]
       };
 
-      setSearchResults(prev => [mockResult, ...prev]);
-      setSelectedResult(mockResult);
-      
+      // Salvar resultado no banco
+      const { data: newResult, error } = await supabase
+        .from('search_results')
+        .insert({
+          query,
+          provider,
+          raw_response: mockResponse,
+          referencia_fontes: mockResponse.fontes,
+          etapas_raciocinio: mockResponse.raciocinio,
+          status: 'completed'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCurrentResult(newResult);
+      setSearchResults(prev => [newResult, ...prev]);
+
       toast({
         title: "Busca concluída",
-        description: `Encontradas ${mockResult.references.length} referências`,
+        description: "Resultados obtidos com sucesso",
       });
     } catch (error) {
       console.error('Erro na busca:', error);
       toast({
-        title: "Erro na busca",
-        description: "Ocorreu um erro ao realizar a busca",
+        title: "Erro",
+        description: "Erro ao realizar busca",
         variant: "destructive",
       });
     } finally {
-      setIsSearching(false);
+      setSearching(false);
     }
   };
 
-  const handleProcessResult = async (resultId: string, scope: 'estado' | 'sindicato' | 'todos') => {
+  const startBatchProcessing = async (resultId: string) => {
+    setProcessing(true);
+
     try {
+      const { data, error } = await supabase
+        .from('batch_processing')
+        .insert({
+          search_result_id: resultId,
+          scope,
+          status: 'processing',
+          total_count: 100 // Exemplo
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Simular processamento em lotes
       toast({
         title: "Processamento iniciado",
-        description: `Dados sendo processados por ${scope}`,
+        description: `Processando dados para escopo: ${scope}`,
       });
+
+      // Aqui viria a lógica real de processamento
+      setTimeout(() => {
+        setProcessing(false);
+        toast({
+          title: "Processamento concluído",
+          description: "Dados salvos no banco Supabase",
+        });
+      }, 3000);
+
     } catch (error) {
       console.error('Erro no processamento:', error);
+      setProcessing(false);
       toast({
-        title: "Erro no processamento",
-        description: "Ocorreu um erro ao processar os dados",
+        title: "Erro",
+        description: "Erro ao iniciar processamento",
         variant: "destructive",
       });
+    }
+  };
+
+  const getProviderIcon = (providerName: string) => {
+    switch (providerName) {
+      case 'gemini': return <Brain className="h-4 w-4" />;
+      case 'perplexity': return <Search className="h-4 w-4" />;
+      case 'jina': return <FileText className="h-4 w-4" />;
+      default: return <Zap className="h-4 w-4" />;
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'processing': return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+      case 'error': return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default: return <Clock className="h-4 w-4 text-yellow-500" />;
     }
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Busca de Convenções</h1>
         <p className="text-muted-foreground">
-          Pesquise informações sobre convenções coletivas usando IA avançada
+          Realize buscas inteligentes utilizando IA para encontrar informações sobre convenções coletivas
         </p>
       </div>
 
+      {/* Formulário de Busca */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -120,158 +245,208 @@ const BuscaConvencoes = () => {
             Nova Busca
           </CardTitle>
           <CardDescription>
-            Digite sua consulta e escolha o provedor de IA para realizar a busca
+            Configure os parâmetros da busca e selecione o provedor de IA
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Textarea
-                placeholder="Ex: Quais são os pisos salariais para analistas de sistemas em SP?"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
-            <div className="w-48 space-y-4">
-              <Select value={provider} onValueChange={setProvider}>
+          <div className="space-y-2">
+            <Label htmlFor="query">Consulta</Label>
+            <Textarea
+              id="query"
+              placeholder="Ex: Buscar pisos salariais para analistas de sistemas em São Paulo..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="provider">Provedor de IA</Label>
+              <Select value={provider} onValueChange={(value) => setProvider(value as 'gemini' | 'perplexity' | 'jina')}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Provedor de IA" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gemini">Google Gemini</SelectItem>
-                  <SelectItem value="perplexity">Perplexity</SelectItem>
-                  <SelectItem value="jina">Jina AI</SelectItem>
+                  <SelectItem value="gemini">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      Google Gemini
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="perplexity">
+                    <div className="flex items-center gap-2">
+                      <Search className="h-4 w-4" />
+                      Perplexity AI
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="jina">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Jina AI
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
-              
-              <Button 
-                onClick={handleSearch} 
-                disabled={isSearching || !query.trim()}
-                className="w-full"
-              >
-                {isSearching ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Buscando...
-                  </>
-                ) : (
-                  <>
-                    <Search className="mr-2 h-4 w-4" />
-                    Buscar
-                  </>
-                )}
-              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="scope">Escopo do Processamento</Label>
+              <Select value={scope} onValueChange={(value) => setScope(value as 'estado' | 'sindicato' | 'todos')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Estados</SelectItem>
+                  <SelectItem value="estado">Por Estado</SelectItem>
+                  <SelectItem value="sindicato">Por Sindicato</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
+          <Button 
+            onClick={performSearch} 
+            disabled={searching || !query.trim()}
+            className="w-full"
+          >
+            {searching ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Buscando...
+              </>
+            ) : (
+              <>
+                <Search className="mr-2 h-4 w-4" />
+                Realizar Busca
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 
-      {selectedResult && (
+      {/* Resultado Atual */}
+      {currentResult && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5" />
+              {getProviderIcon(currentResult.provider)}
               Resultado da Busca
-              <Badge variant="outline">{selectedResult.provider}</Badge>
+              <Badge variant="outline">{currentResult.provider}</Badge>
+              {getStatusIcon(currentResult.status)}
             </CardTitle>
+            <CardDescription>
+              Consulta: {currentResult.query}
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="processed" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="processed">Processado</TabsTrigger>
-                <TabsTrigger value="reasoning">Raciocínio</TabsTrigger>
-                <TabsTrigger value="references">Referências</TabsTrigger>
-                <TabsTrigger value="raw">Dados Brutos</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="processed" className="space-y-4">
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Dados Processados</h3>
-                  <pre className="text-sm overflow-auto max-h-96">
-                    {JSON.stringify(selectedResult.processed_data, null, 2)}
-                  </pre>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button onClick={() => handleProcessResult(selectedResult.id, 'estado')}>
-                    <Database className="mr-2 h-4 w-4" />
-                    Processar por Estado
-                  </Button>
-                  <Button onClick={() => handleProcessResult(selectedResult.id, 'sindicato')}>
-                    <Database className="mr-2 h-4 w-4" />
-                    Processar por Sindicato
-                  </Button>
-                  <Button onClick={() => handleProcessResult(selectedResult.id, 'todos')}>
-                    <Database className="mr-2 h-4 w-4" />
-                    Processar Todos
-                  </Button>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="reasoning">
-                <div className="space-y-2">
-                  {selectedResult.reasoning.map((step, index) => (
-                    <div key={index} className="bg-blue-50 border-l-4 border-blue-400 p-3">
-                      <div className="font-medium text-sm">Passo {index + 1}</div>
-                      <div className="text-sm">{step}</div>
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="references">
-                <div className="space-y-2">
-                  {selectedResult.references.map((ref, index) => (
-                    <div key={index} className="bg-green-50 border-l-4 border-green-400 p-3">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        <span className="text-sm">{ref}</span>
+          <CardContent className="space-y-4">
+            {/* Etapas do Raciocínio */}
+            {currentResult.etapas_raciocinio && currentResult.etapas_raciocinio.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-medium">Etapas do Raciocínio</h4>
+                <div className="space-y-1">
+                  {currentResult.etapas_raciocinio.map((etapa, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
+                        {index + 1}
                       </div>
+                      {etapa}
                     </div>
                   ))}
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="raw">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <pre className="text-xs overflow-auto max-h-96">
-                    {JSON.stringify(selectedResult.raw_response, null, 2)}
-                  </pre>
+              </div>
+            )}
+
+            {/* Fontes de Referência */}
+            {currentResult.referencia_fontes && currentResult.referencia_fontes.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-medium">Fontes de Referência</h4>
+                <div className="space-y-1">
+                  {currentResult.referencia_fontes.map((fonte, index) => (
+                    <div key={index} className="text-sm text-blue-600 hover:underline">
+                      • {fonte}
+                    </div>
+                  ))}
                 </div>
-              </TabsContent>
-            </Tabs>
+              </div>
+            )}
+
+            {/* Resposta Bruta */}
+            <div className="space-y-2">
+              <h4 className="font-medium">Resposta da IA</h4>
+              <div className="bg-muted p-4 rounded-lg text-sm">
+                <pre className="whitespace-pre-wrap">
+                  {JSON.stringify(currentResult.raw_response, null, 2)}
+                </pre>
+              </div>
+            </div>
+
+            {/* Processamento */}
+            <div className="pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">Processamento para o Banco</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Processar e salvar os dados estruturados no Supabase
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => startBatchProcessing(currentResult.id)}
+                  disabled={processing}
+                  variant="outline"
+                >
+                  {processing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    "Processar Dados"
+                  )}
+                </Button>
+              </div>
+              {processing && (
+                <div className="mt-4">
+                  <Progress value={33} className="w-full" />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Processando dados por hierarquia: sindicatos → convenções → cargos...
+                  </p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
 
+      {/* Histórico de Buscas */}
       {searchResults.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Histórico de Buscas</CardTitle>
+            <CardDescription>
+              Últimas buscas realizadas
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {searchResults.map((result) => (
-                <div
-                  key={result.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedResult?.id === result.id
-                      ? 'bg-primary/10 border-primary'
-                      : 'hover:bg-muted/50'
-                  }`}
-                  onClick={() => setSelectedResult(result)}
+                <div 
+                  key={result.id} 
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => setCurrentResult(result)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium text-sm truncate">{result.query}</div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {result.provider}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3">
+                    {getProviderIcon(result.provider)}
+                    <div>
+                      <p className="font-medium text-sm">{result.query}</p>
+                      <p className="text-xs text-muted-foreground">
                         {new Date(result.created_at).toLocaleString('pt-BR')}
-                      </span>
+                      </p>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{result.provider}</Badge>
+                    {getStatusIcon(result.status)}
                   </div>
                 </div>
               ))}
