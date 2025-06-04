@@ -1,7 +1,9 @@
 
 import { useSindicatosData } from "@/hooks/useSindicatosData";
-import { EstadoCard } from "@/components/sindicatos/EstadoCard";
 import { SearchFilters } from "@/components/sindicatos/SearchFilters";
+import { PainelSindicatosHeader } from "@/components/sindicatos/PainelSindicatosHeader";
+import { PainelSindicatosGrid } from "@/components/sindicatos/PainelSindicatosGrid";
+import { PainelSindicatosEmptyState } from "@/components/sindicatos/PainelSindicatosEmptyState";
 import { useState } from "react";
 
 export default function PainelSindicatos() {
@@ -41,13 +43,8 @@ export default function PainelSindicatos() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold">Painel de Sindicatos</h1>
-        <p className="text-muted-foreground">
-          Explore informações detalhadas sobre sindicatos e convenções coletivas
-        </p>
-      </div>
+    <div className="container mx-auto px-4 py-6 space-y-6 min-h-screen">
+      <PainelSindicatosHeader />
 
       <SearchFilters
         searchTerm={searchTerm}
@@ -58,20 +55,9 @@ export default function PainelSindicatos() {
       />
 
       {filteredDados.length === 0 ? (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-muted-foreground mb-2">
-            Nenhum resultado encontrado
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Tente ajustar os filtros ou termo de busca
-          </p>
-        </div>
+        <PainelSindicatosEmptyState />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
-          {filteredDados.map((estado, index) => (
-            <EstadoCard key={estado.sigla} estado={estado} />
-          ))}
-        </div>
+        <PainelSindicatosGrid filteredDados={filteredDados} />
       )}
     </div>
   );
