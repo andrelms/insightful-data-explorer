@@ -40,6 +40,7 @@ interface PisoSalarial {
 interface Particularidade {
   id: string;
   descricao: string;
+  sugestao_particularidade?: string;
 }
 
 interface Beneficio {
@@ -62,19 +63,19 @@ export function useConvencaoDetalhes(id: string | undefined) {
     const fetchConvencao = async () => {
       setLoading(true);
       try {
-        // Buscar dados da convenção
+        // Buscar dados da convenção com sindicato
         const { data: convencaoData, error: convencaoError } = await supabase
           .from('convenios')
           .select(`
-            id, descricao, created_at,
-            sindicatos (nome, cnpj, site, data_base)
+            id, descricao, vigencia_inicio, vigencia_fim, 
+            sindicatos (nome, cnpj, site, data_base, estado)
           `)
           .eq('id', id)
           .single();
           
         if (convencaoError) throw convencaoError;
         
-        // Buscar pisos salariais associados aos cargos dessa convênio
+        // Buscar cargos e dados relacionados
         const { data: cargosData, error: cargosError } = await supabase
           .from('cargos')
           .select(`
@@ -86,7 +87,32 @@ export function useConvencaoDetalhes(id: string | undefined) {
 
         if (cargosError) throw cargosError;
         
-        // Transformar dados de cargos em pisos salariais
+        // Buscar anotações para benefícios (excluindo PARTICULARIDADE e CNPJ)
+        const { data: anotacoesData, error: anotacoesError } = await supabase
+          .from('anotacoes')
+          .select('*')
+          .eq('convenio_id', id)
+          .not('coluna', 'in', '("PARTICULARIDADE", "CNPJ")');
+          
+        if (anotacoesError) throw anotacoesError;
+        
+        // Buscar particularidades da tabela particularidades e anotações PARTICULARIDADE
+        const { data: particularidadesData, error: particularidadesError } = await supabase
+          .from('particularidades')
+          .select('*')
+          .eq('convenio_id', id);
+          
+        if (particularidadesError) throw particularidadesError;
+
+        const { data: anotacoesParticularidades, error: anotParticError } = await supabase
+          .from('anotacoes')
+          .select('*')
+          .eq('convenio_id', id)
+          .eq('coluna', 'PARTICULARIDADE');
+
+        if (anotParticError) throw anotParticError;
+        
+        // Processar pisos salariais
         const pisosProcessed: PisoSalarial[] = [];
         if (cargosData) {
           cargosData.forEach(cargo => {
@@ -94,7 +120,6 @@ export function useConvencaoDetalhes(id: string | undefined) {
               ? cargo.piso_salarial[0].valor 
               : null;
               
-            // Processar valores de hora (normal, 50%, 100%)
             let valorHoraNormal = null;
             let valorHoraExtra50 = null;
             let valorHoraExtra100 = null;
@@ -119,16 +144,27 @@ export function useConvencaoDetalhes(id: string | undefined) {
           });
         }
         
-        // Buscar particularidades
-        const { data: particularidadesData, error: particularidadesError } = await supabase
-          .from('particularidades')
-          .select('*')
-          .eq('convenio_id', id);
-          
-        if (particularidadesError) throw particularidadesError;
+        // Processar benefícios das anotações
+        const beneficiosProcessed = (anotacoesData || []).map(anotacao => ({
+          id: anotacao.id,
+          tipo: anotacao.coluna || "Benefício",
+          valor: anotacao.campo_formatado,
+          descricao: anotacao.sugestao_particularidade
+        }));
         
-        // Extrair benefícios das particularidades
-        const beneficiosData = particularidadesData?.filter(p => p.categoria === 'benefício') || [];
+        // Processar particularidades
+        const particularidadesProcessed = [
+          ...(particularidadesData || []).map(p => ({
+            id: p.id,
+            descricao: p.conteudo || "",
+            sugestao_particularidade: p.categoria
+          })),
+          ...(anotacoesParticularidades || []).map(a => ({
+            id: a.id,
+            descricao: a.campo_formatado || "",
+            sugestao_particularidade: a.sugestao_particularidade
+          }))
+        ];
         
         // Atualizar estados
         if (convencaoData) {
@@ -138,10 +174,7 @@ export function useConvencaoDetalhes(id: string | undefined) {
             numero: convencaoData.id.substring(0, 8),
             tipo: "Convenção Coletiva",
             fonte: "Base de dados sindical",
-            vigencia_inicio: convencaoData.created_at,
-            vigencia_fim: null,
-            data_base: convencaoData.sindicatos?.data_base || null,
-            estado: null,
+            estado: convencaoData.sindicatos?.estado || null,
             abrangencia: null,
             sindicato: convencaoData.sindicatos,
             assistencia_medica: false,
@@ -154,26 +187,9 @@ export function useConvencaoDetalhes(id: string | undefined) {
         }
         
         setPisosSalariais(pisosProcessed);
+        setBeneficios(beneficiosProcessed);
+        setParticularidades(particularidadesProcessed);
         
-        // Transformar particularidades
-        const partProcessed = (particularidadesData || [])
-          .filter(p => p.categoria !== 'benefício')
-          .map(p => ({
-            id: p.id,
-            descricao: p.conteudo || ""
-          }));
-        
-        setParticularidades(partProcessed);
-        
-        // Transformar benefícios
-        const benProcessed = beneficiosData.map(b => ({
-          id: b.id,
-          tipo: b.categoria || "Benefício",
-          valor: null,
-          descricao: b.conteudo
-        }));
-        
-        setBeneficios(benProcessed);
       } catch (error) {
         console.error("Erro ao buscar dados da convenção:", error);
       } finally {

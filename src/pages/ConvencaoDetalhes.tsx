@@ -52,8 +52,8 @@ const ConvencaoDetalhes = () => {
         isActive={isActive}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
           <ConvencaoDetalhesInfoCard
             vigenciaInicio={convencao.vigencia_inicio}
             vigenciaFim={convencao.vigencia_fim}
@@ -69,19 +69,9 @@ const ConvencaoDetalhes = () => {
           />
         </div>
         
-        <div className="col-span-1 md:col-span-2">
+        <div className="lg:col-span-3 space-y-4">
           <ConvencaoDetalhesPisosCard pisosSalariais={pisosSalariais} />
-          
-          <ConvencaoDetalhesBeneficiosCard
-            beneficios={beneficios}
-            valeRefeicao={convencao.vale_refeicao}
-            valeRefeicaoValor={convencao.vale_refeicao_valor}
-            assistenciaMedica={convencao.assistencia_medica}
-            seguroVida={convencao.seguro_vida}
-            uniforme={convencao.uniforme}
-            adicionalNoturno={convencao.adicional_noturno}
-          />
-          
+          <ConvencaoDetalhesBeneficiosCard beneficios={beneficios} />
           <ConvencaoDetalhesParticularidadesCard particularidades={particularidades} />
         </div>
       </div>

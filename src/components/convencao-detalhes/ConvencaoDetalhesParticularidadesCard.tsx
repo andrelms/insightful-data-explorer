@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 interface Particularidade {
   id: string;
   descricao: string;
+  sugestao_particularidade?: string;
 }
 
 interface ConvencaoDetalhesParticularidadesCardProps {
@@ -24,11 +25,18 @@ export function ConvencaoDetalhesParticularidadesCard({
         <CardTitle className="text-base">Particularidades</CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {particularidades.map((item, index) => (
-            <li key={index} className="flex items-start gap-2">
-              <span className="text-primary font-bold">•</span>
-              <span>{item.descricao}</span>
+            <li key={index} className="flex flex-col gap-1">
+              <div className="flex items-start gap-2">
+                <span className="text-primary font-bold">•</span>
+                <span>{item.descricao}</span>
+              </div>
+              {item.sugestao_particularidade && (
+                <div className="ml-4 text-sm text-muted-foreground italic">
+                  {item.sugestao_particularidade}
+                </div>
+              )}
             </li>
           ))}
         </ul>

@@ -30,7 +30,7 @@ export function SindicatoCard({ estado }: SindicatoCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden hover-scale h-full flex flex-col">
+    <Card className="overflow-hidden hover-scale h-full flex flex-col transition-all duration-200 hover:shadow-lg">
       <div className="bg-gradient-to-r from-blue-600 to-violet-600 text-white p-4">
         <div className="flex items-center gap-2">
           <MapPin className="h-5 w-5" />
@@ -48,7 +48,7 @@ export function SindicatoCard({ estado }: SindicatoCardProps) {
           return (
             <div key={sindIdx} className="border-t first:border-t-0">
               <div 
-                className="p-4 cursor-pointer hover:bg-muted/50 flex justify-between items-center"
+                className="p-4 cursor-pointer hover:bg-muted/50 flex justify-between items-center transition-colors"
                 onClick={() => toggleSindicato(estado.sigla, sindIdx)}
               >
                 <div className="font-medium text-primary">{sindicato.nome}</div>
