@@ -169,14 +169,21 @@ export function useConvencaoDetalhes(id: string | undefined) {
         // Atualizar estados
         if (convencaoData) {
           setConvencao({
-            ...convencaoData,
+            id: convencaoData.id,
             titulo: convencaoData.descricao || "Sem descrição",
             numero: convencaoData.id.substring(0, 8),
             tipo: "Convenção Coletiva",
             fonte: "Base de dados sindical",
             estado: convencaoData.sindicatos?.estado || null,
             abrangencia: null,
-            sindicato: convencaoData.sindicatos,
+            sindicato: convencaoData.sindicatos ? {
+              nome: convencaoData.sindicatos.nome,
+              cnpj: convencaoData.sindicatos.cnpj,
+              site: convencaoData.sindicatos.site
+            } : null,
+            vigencia_inicio: convencaoData.vigencia_inicio,
+            vigencia_fim: convencaoData.vigencia_fim,
+            data_base: convencaoData.sindicatos?.data_base || null,
             assistencia_medica: false,
             vale_refeicao: null,
             vale_refeicao_valor: null,
