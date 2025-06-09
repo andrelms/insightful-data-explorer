@@ -23,11 +23,12 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
     // Pegar apenas particularidades da tabela particularidades
     const particularidadesFromTable = sindicato.particularidades || [];
 
-    // Filtrar apenas itens que têm conteúdo válido (detalhe ou conteudo preenchidos)
-    const particularidadesValidas = particularidadesFromTable.filter(part => 
-      (part.detalhe && part.detalhe.trim() !== '') || 
-      (part.conteudo && part.conteudo.trim() !== '')
-    );
+    // Filtrar apenas itens que têm conteúdo válido nos campos detalhe ou conteudo
+    const particularidadesValidas = particularidadesFromTable.filter(part => {
+      const temDetalhe = part.detalhe && part.detalhe.trim() !== '';
+      const temConteudo = part.conteudo && part.conteudo.trim() !== '';
+      return temDetalhe || temConteudo;
+    });
 
     // Ordenar por registro_idx
     return particularidadesValidas.sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0));
@@ -52,14 +53,14 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
       <CollapsibleContent className="mt-2">
         <div className="space-y-2">
           {particularidadesData.map((part, i) => (
-            <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
+            <div key={i} className="bg-orange-100 text-orange-800 p-3 rounded-lg">
               {part.detalhe && part.detalhe.trim() !== '' && (
-                <div className="font-semibold text-orange-900 mb-1">
+                <div className="font-semibold text-orange-900 mb-2">
                   {part.detalhe}
                 </div>
               )}
               {part.conteudo && part.conteudo.trim() !== '' && (
-                <div className="text-orange-700 text-xs">
+                <div className="text-orange-700 text-sm">
                   {part.conteudo}
                 </div>
               )}
