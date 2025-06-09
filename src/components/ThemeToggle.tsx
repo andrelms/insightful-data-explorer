@@ -13,21 +13,8 @@ export function ThemeToggle() {
   }, []);
 
   const toggleTheme = () => {
-    if (theme === "light") {
-      setTheme("dark");
-    } else if (theme === "dark") {
-      setTheme("light");
-    } else {
-      // If theme is "system", default to light
-      setTheme("light");
-    }
+    setTheme(theme === "light" ? "dark" : "light");
   };
-
-  // Determine if we should show dark mode icons
-  const isDark = mounted && (
-    theme === "dark" || 
-    (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
-  );
 
   if (!mounted) {
     return (
@@ -47,10 +34,13 @@ export function ThemeToggle() {
       variant="outline"
       size="icon"
       onClick={toggleTheme}
-      className="rounded-full w-10 h-10 border-muted-foreground/20 bg-background/80 backdrop-blur-sm transition-all duration-500 ease-in-out"
+      className="rounded-full w-10 h-10 border-muted-foreground/20 bg-background/80 backdrop-blur-sm transition-all duration-300 ease-in-out"
     >
-      <Sun className={`h-[1.2rem] w-[1.2rem] transition-all duration-500 ${isDark ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'}`} />
-      <Moon className={`absolute h-[1.2rem] w-[1.2rem] transition-all duration-500 ${isDark ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 rotate-90 scale-0'}`} />
+      {theme === "light" ? (
+        <Sun className="h-[1.2rem] w-[1.2rem] transition-all duration-300" />
+      ) : (
+        <Moon className="h-[1.2rem] w-[1.2rem] transition-all duration-300" />
+      )}
       <span className="sr-only">Toggle theme</span>
     </Button>
   );

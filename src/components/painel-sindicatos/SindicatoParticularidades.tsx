@@ -50,18 +50,14 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
         <div className="space-y-2">
           {particularidadesData.map((part, i) => (
             <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-              <div className="font-medium mb-1">
-                {/* Para anotações use campo_formatado, para particularidades use conteudo */}
-                {'campo_formatado' in part && part.campo_formatado ? part.campo_formatado : part.conteudo}
-              </div>
-              {part.conteudo && (
-                <div className="text-orange-700 text-xs italic">
-                  {part.conteudo}
+              {part.detalhe && (
+                <div className="text-orange-700 text-xs mb-1">
+                  <strong>Detalhe:</strong> {part.detalhe}
                 </div>
               )}
-              {part.detalhe && (
-                <div className="text-orange-700 text-xs mt-1">
-                  {part.detalhe}
+              {part.conteudo && (
+                <div className="text-orange-700 text-xs">
+                  <strong>Conteúdo:</strong> {part.conteudo}
                 </div>
               )}
             </div>
