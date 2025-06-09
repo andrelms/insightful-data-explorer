@@ -19,7 +19,20 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
     }));
   };
 
-  if (!sindicato.particularidades || sindicato.particularidades.length === 0) return null;
+  const getParticularidades = () => {
+    const particularidadesFromAnotacoes = sindicato.anotacoes?.filter(anotacao =>
+      anotacao.coluna?.toUpperCase() === 'PARTICULARIDADE'
+    ) || [];
+
+    const particularidadesFromTable = sindicato.particularidades || [];
+
+    return [...particularidadesFromAnotacoes, ...particularidadesFromTable]
+      .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0));
+  };
+
+  const particularidadesData = getParticularidades();
+
+  if (particularidadesData.length === 0) return null;
 
   return (
     <Collapsible 
@@ -31,15 +44,26 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
           "h-4 w-4 transition-transform",
           expandedParticularidades[sindicato.id] && "transform rotate-90"
         )} />
-        Particularidades ({sindicato.particularidades.length})
+        Particularidades ({particularidadesData.length})
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2">
         <div className="space-y-2">
-          {sindicato.particularidades
-            .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
-            .map((part, i) => (
+          {particularidadesData.map((part, i) => (
             <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-              {part.conteudo || part.detalhe}
+              <div className="font-medium mb-1">
+                {/* Para anotações use campo_formatado, para particularidades use conteudo */}
+                {'campo_formatado' in part && part.campo_formatado ? part.campo_formatado : part.conteudo}
+              </div>
+              {part.conteudo && (
+                <div className="text-orange-700 text-xs italic">
+                  {part.conteudo}
+                </div>
+              )}
+              {part.detalhe && (
+                <div className="text-orange-700 text-xs mt-1">
+                  {part.detalhe}
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -25,7 +25,7 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
     return sindicato.anotacoes
       .filter(anotacao => 
         anotacao.coluna && 
-        !['PARTICULARIDADE', 'DATA BASE', 'SITE'].includes(anotacao.coluna.toUpperCase())
+        !['PARTICULARIDADE', 'DATA BASE', 'SITE', 'CNPJ'].includes(anotacao.coluna.toUpperCase())
       )
       .map(anotacao => ({
         coluna: anotacao.coluna,
@@ -36,21 +36,9 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
       .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0));
   };
 
-  const getParticularidades = () => {
-    const particularidadesFromAnotacoes = sindicato.anotacoes?.filter(anotacao =>
-      anotacao.coluna?.toUpperCase() === 'PARTICULARIDADE'
-    ) || [];
-
-    const particularidadesFromTable = sindicato.particularidades || [];
-
-    return [...particularidadesFromAnotacoes, ...particularidadesFromTable]
-      .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0));
-  };
-
   const beneficiosData = getBeneficiosFromAnotacoes();
-  const particularidadesData = getParticularidades();
 
-  if (beneficiosData.length === 0 && particularidadesData.length === 0) return null;
+  if (beneficiosData.length === 0) return null;
 
   return (
     <Collapsible 
@@ -62,11 +50,10 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
           "h-4 w-4 transition-transform",
           expandedBeneficios[sindicato.id] && "transform rotate-90"
         )} />
-        Benefícios ({beneficiosData.length + particularidadesData.length})
+        Benefícios ({beneficiosData.length})
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2">
         <div className="space-y-3">
-          {/* Benefícios das anotações - organizados por coluna */}
           {beneficiosData.map((beneficio, i) => (
             <div key={`beneficio-${i}`} className="bg-green-100 text-green-800 p-3 rounded-lg border-l-4 border-green-500">
               <div className="font-semibold text-sm mb-1">{beneficio.coluna}</div>
@@ -80,26 +67,6 @@ export function SindicatoBeneficios({ sindicato }: SindicatoBeneficiosProps) {
               </div>
             </div>
           ))}
-          
-          {/* Particularidades */}
-          {particularidadesData.length > 0 && (
-            <div className="bg-orange-100 text-orange-800 p-3 rounded-lg border-l-4 border-orange-500">
-              <div className="font-semibold text-sm mb-2">PARTICULARIDADE</div>
-              <div className="space-y-1">
-                {particularidadesData.map((part, i) => (
-                  <div key={`part-${i}`} className="text-xs">
-                    {/* Para anotações use campo_formatado, para particularidades use conteudo */}
-                    {'campo_formatado' in part && part.campo_formatado ? part.campo_formatado : part.conteudo}
-                    {part.detalhe && (
-                      <div className="mt-1 text-orange-700">
-                        {part.detalhe}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </CollapsibleContent>
     </Collapsible>
