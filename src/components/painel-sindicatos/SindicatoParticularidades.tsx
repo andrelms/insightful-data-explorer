@@ -20,14 +20,17 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
   };
 
   const getParticularidades = () => {
-    const particularidadesFromAnotacoes = sindicato.anotacoes?.filter(anotacao =>
-      anotacao.coluna?.toUpperCase() === 'PARTICULARIDADE'
-    ) || [];
-
+    // Pegar apenas particularidades da tabela particularidades
     const particularidadesFromTable = sindicato.particularidades || [];
 
-    return [...particularidadesFromAnotacoes, ...particularidadesFromTable]
-      .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0));
+    // Filtrar apenas itens que têm conteúdo válido (detalhe ou conteudo preenchidos)
+    const particularidadesValidas = particularidadesFromTable.filter(part => 
+      (part.detalhe && part.detalhe.trim() !== '') || 
+      (part.conteudo && part.conteudo.trim() !== '')
+    );
+
+    // Ordenar por registro_idx
+    return particularidadesValidas.sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0));
   };
 
   const particularidadesData = getParticularidades();
@@ -50,14 +53,14 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
         <div className="space-y-2">
           {particularidadesData.map((part, i) => (
             <div key={i} className="bg-orange-100 text-orange-800 p-2 rounded text-xs">
-              {part.detalhe && (
-                <div className="text-orange-700 text-xs mb-1">
-                  <strong>Detalhe:</strong> {part.detalhe}
+              {part.detalhe && part.detalhe.trim() !== '' && (
+                <div className="font-semibold text-orange-900 mb-1">
+                  {part.detalhe}
                 </div>
               )}
-              {part.conteudo && (
+              {part.conteudo && part.conteudo.trim() !== '' && (
                 <div className="text-orange-700 text-xs">
-                  <strong>Conteúdo:</strong> {part.conteudo}
+                  {part.conteudo}
                 </div>
               )}
             </div>
