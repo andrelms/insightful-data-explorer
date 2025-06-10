@@ -19,71 +19,53 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
     }));
   };
 
+  const getParticularidadesFromAnotacoes = () => {
+    if (!sindicato.anotacoes) return [];
+    
+    return sindicato.anotacoes
+      .filter(anotacao => 
+        anotacao.sugestao_particularidade && 
+        anotacao.sugestao_particularidade.trim() !== '' &&
+        anotacao.campo_formatado &&
+        anotacao.campo_formatado.trim() !== '' &&
+        anotacao.coluna &&
+        anotacao.coluna.toUpperCase() !== 'PARTICULARIDADE'
+      )
+      .map(anotacao => ({
+        campo_formatado: anotacao.campo_formatado,
+        sugestao_particularidade: anotacao.sugestao_particularidade,
+        registro_idx: anotacao.registro_idx
+      }))
+      .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0));
+  };
+
   const getParticularidadesGrouped = () => {
-    // Pegar particularidades da tabela particularidades
-    const particularidadesFromTable = sindicato.particularidades || [];
-
-    // Filtrar apenas itens que têm conteúdo válido nos campos detalhe ou conteudo
-    const particularidadesValidas = particularidadesFromTable.filter(part => {
-      const temDetalhe = part.detalhe && part.detalhe.trim() !== '';
-      const temConteudo = part.conteudo && part.conteudo.trim() !== '';
-      return temDetalhe || temConteudo;
-    });
-
-    // Pegar também anotações que podem ter sugestao_particularidade
-    const anotacoes = sindicato.anotacoes || [];
-    const anotacoesComSugestao = anotacoes.filter(anotacao => 
-      anotacao.sugestao_particularidade && 
-      anotacao.sugestao_particularidade.trim() !== '' &&
-      anotacao.campo_formatado &&
-      anotacao.campo_formatado.trim() !== ''
-    );
+    const anotacoesComSugestao = getParticularidadesFromAnotacoes();
 
     // Agrupar por campo_formatado
     const grupos: Record<string, {
       campo_formatado: string;
-      particularidades: typeof particularidadesValidas;
-      sugestoes: typeof anotacoesComSugestao;
+      particularidades: typeof anotacoesComSugestao;
     }> = {};
 
-    // Adicionar particularidades aos grupos
-    particularidadesValidas.forEach(part => {
-      const key = part.campo_formatado || 'sem_grupo';
-      if (!grupos[key]) {
-        grupos[key] = {
-          campo_formatado: part.campo_formatado || '',
-          particularidades: [],
-          sugestoes: []
-        };
-      }
-      grupos[key].particularidades.push(part);
-    });
-
-    // Adicionar sugestões aos grupos correspondentes
+    // Adicionar sugestões aos grupos
     anotacoesComSugestao.forEach(anotacao => {
       const key = anotacao.campo_formatado || 'sem_grupo';
       if (!grupos[key]) {
         grupos[key] = {
           campo_formatado: anotacao.campo_formatado || '',
-          particularidades: [],
-          sugestoes: []
+          particularidades: []
         };
       }
-      grupos[key].sugestoes.push(anotacao);
+      grupos[key].particularidades.push(anotacao);
     });
 
     // Converter para array e ordenar
     return Object.values(grupos)
-      .filter(grupo => grupo.particularidades.length > 0 || grupo.sugestoes.length > 0)
+      .filter(grupo => grupo.particularidades.length > 0)
       .sort((a, b) => {
-        const aIdx = Math.min(
-          ...a.particularidades.map(p => p.registro_idx || 0),
-          ...a.sugestoes.map(s => s.registro_idx || 0)
-        );
-        const bIdx = Math.min(
-          ...b.particularidades.map(p => p.registro_idx || 0),
-          ...b.sugestoes.map(s => s.registro_idx || 0)
-        );
+        const aIdx = Math.min(...a.particularidades.map(p => p.registro_idx || 0));
+        const bIdx = Math.min(...b.particularidades.map(p => p.registro_idx || 0));
         return aIdx - bIdx;
       });
   };
@@ -92,7 +74,7 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
 
   if (gruposData.length === 0) return null;
 
-  const totalItems = gruposData.reduce((acc, grupo) => acc + grupo.particularidades.length + grupo.sugestoes.length, 0);
+  const totalItems = gruposData.reduce((acc, grupo) => acc + grupo.particularidades.length, 0);
 
   return (
     <Collapsible 
@@ -121,30 +103,9 @@ export function SindicatoParticularidades({ sindicato }: SindicatoParticularidad
               {grupo.particularidades
                 .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
                 .map((part, i) => (
-                  <div key={`part-${i}`} className="bg-orange-100 text-orange-800 p-3 rounded-lg">
-                    {part.detalhe && part.detalhe.trim() !== '' && (
-                      <div className="font-semibold text-orange-900 mb-2">
-                        {part.detalhe}
-                      </div>
-                    )}
-                    {part.conteudo && part.conteudo.trim() !== '' && (
-                      <div className="text-orange-700 text-sm">
-                        {part.conteudo}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-              {/* Sugestões de particularidades do grupo */}
-              {grupo.sugestoes
-                .sort((a, b) => (a.registro_idx || 0) - (b.registro_idx || 0))
-                .map((sugestao, i) => (
-                  <div key={`sug-${i}`} className="bg-blue-100 text-blue-800 p-3 rounded-lg border-l-4 border-blue-500">
-                    <div className="font-semibold text-blue-900 mb-1 text-sm">
-                      Sugestão de Particularidade
-                    </div>
-                    <div className="text-blue-700 text-sm">
-                      {sugestao.sugestao_particularidade}
+                  <div key={`part-${i}`} className="bg-orange-100 text-orange-800 p-3 rounded-lg border-l-4 border-orange-500">
+                    <div className="text-orange-700 text-sm">
+                      {part.sugestao_particularidade}
                     </div>
                   </div>
                 ))}
